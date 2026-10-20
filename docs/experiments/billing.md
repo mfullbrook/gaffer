@@ -13,7 +13,7 @@ Run 2026-10-18, 19:57–20:03 UTC, on Mark's Mac (macOS 26.5.2), branch `gaffer-
 
 No result contradicts R2, R14 or R20. R14 and R20 weren't exercised here (no sandbox network or read-denial tests); they belong to Experiment 3.
 
-Two things are still open for Mark (see [Open items](#open-items)): the next-day billing-page re-read that R2 requires, and confirming that extra usage is off on both plans.
+Mark confirmed on 2026-10-20 that the Anthropic Console and OpenAI API billing pages show no usage, and that extra usage is off on both plans. Experiment 1 is concluded. One minor item is still open (see [Open items](#open-items)).
 
 ## 1. Versions and auth evidence
 
@@ -222,6 +222,6 @@ These touch R3 and R18, not R2, R14 or R20, so they don't stop this experiment. 
 
 ## Open items
 
-- [ ] **Mark: re-read the Anthropic Console and OpenAI API billing/usage pages on 2026-10-19** and confirm that no metered usage appears for 2026-10-18 around 19:57–20:03 UTC (R2 requires this before Experiment 1 is concluded).
-- [ ] **Mark: confirm extra usage / overage is off** on the Claude and ChatGPT plans. Headless evidence so far: Claude reports `overageStatus: "rejected"`, `overageDisabledReason: "out_of_credits"`, `isUsingOverage: false`; Codex reports `credits.has_credits: false`, `balance: "0"`. Neither proves the setting is off rather than unfunded.
+- [x] **Mark: re-read the Anthropic Console and OpenAI API billing/usage pages on 2026-10-19** and confirm that no metered usage appears for 2026-10-18 around 19:57–20:03 UTC (R2 requires this before Experiment 1 is concluded). Done 2026-10-20: no usage on either page.
+- [x] **Mark: confirm extra usage / overage is off** on the Claude and ChatGPT plans. Headless evidence so far: Claude reports `overageStatus: "rejected"`, `overageDisabledReason: "out_of_credits"`, `isUsingOverage: false`; Codex reports `credits.has_credits: false`, `balance: "0"`. Neither proves the setting is off rather than unfunded. Done 2026-10-20: Mark confirmed extra usage is off on both plans.
 - [ ] **Mark: note the claude.ai Settings > Usage percentage** next to a fresh `utilization` reading, to confirm the 0–1 fraction reading of that field.

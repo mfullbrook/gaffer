@@ -160,12 +160,12 @@ The skipped-gates statements required by source spec §10 (staging, legal, live 
 - A round is `(repo, PR, head SHA, seq)`. It completes when all three hold:
   - Required checks have concluded.
   - The Codex review for the head is recorded.
-  - CodeRabbit's completion signal for the head has been seen, followed by a 60s settle that resets on new feedback.
+  - CodeRabbit's completion signal for the head has been seen, followed by a 60s settle that resets on new feedback. The signal is the `CodeRabbit` commit status with description exactly `Review completed` (Experiment 2, R27).
 - Feedback items are keyed by `(source, item id, content hash)`, so an edited comment is a new item. A packet is the set of unprocessed items when the round completes. Items are marked processed when the resume result for that packet is recorded.
 - Items that arrive later on the same head open round `seq+1` on that head, so an old packet is never re-applied.
 - The writer sees only the packet. It never fetches PR comments itself.
 
-**CodeRabbit fallback.** If Experiment 2 finds no reliable per-head completion signal, the CodeRabbit condition becomes "no new CodeRabbit item for 10 minutes after the last head push, bounded by the round timeout." The report then marks CodeRabbit completion as **unverified** instead of complete. That never counts as verified, and Mark sees it on every READY report.
+**CodeRabbit fallback.** *Amended by R27: Experiment 2 found a verified signal, so this fallback now applies only when the head's status says `Review skipped…` or `Review paused`, or no `CodeRabbit` status appears within 10 minutes of the push. Those cases complete the round at once as unverified rather than waiting 10 minutes.* Original text: if Experiment 2 finds no reliable per-head completion signal, the CodeRabbit condition becomes "no new CodeRabbit item for 10 minutes after the last head push, bounded by the round timeout." The report then marks CodeRabbit completion as **unverified** instead of complete. That never counts as verified, and Mark sees it on every READY report.
 
 **Waits and timeouts.** A round that hasn't completed 30 minutes after its push is BLOCKED: review_timeout. Polling every 60s with jitter; GitHub and Linear rate-limit headers honored. API errors never count as an empty or completed review.
 
@@ -213,7 +213,7 @@ The skipped-gates statements required by source spec §10 (staging, legal, live 
 
 ## Open Questions
 
-1. **CodeRabbit completion signal.** Which check run, status, review or comment reliably marks a complete round for a head SHA? Experiment 2 decides between the verified path and the fallback above.
+1. **CodeRabbit completion signal.** *Answered by Experiment 2 (R27): the `CodeRabbit` commit status with description `Review completed`.* Which check run, status, review or comment reliably marks a complete round for a head SHA? Experiment 2 decides between the verified path and the fallback above.
 2. **CLI controls.** Experiment 3 has to establish which installed flags or settings give each of these. If any is missing, gaffer refuses rather than guessing.
    - Claude: structured output, session-ID capture, resume by ID, a fixed permission set, and disabling project settings, hooks and MCP.
    - Codex: a read-only sandbox, structured output, and ignoring project config.
@@ -1295,7 +1295,7 @@ Admit every CodeRabbit comment and edit except resolved threads; other authors i
 
 State: approved
 Actual answer: A) Findings only (D16 answer, 2026-10-09)
-Accepted scope: Admit CodeRabbit inline review comments on unresolved, non-outdated threads, CodeRabbit review bodies only for listed actionable sections, and comments by Mark; ignore and list in the report: walkthrough/summary and status comments, edits changing only status or resolution markers (hash over a normalized body), resolved threads, outdated comments (context only), comments by anyone else; Experiment 2 fixtures confirm or correct each rule with one fixture test per rule; PRs open ready for review (not draft) with title `<issue-key>: <issue title>` and a body holding the criterion map and a `gaffer-job: <id>` marker.
+Accepted scope: Admit CodeRabbit inline review comments on unresolved, non-outdated threads, CodeRabbit review bodies only for listed actionable sections, and comments by Mark; ignore and list in the report: walkthrough/summary and status comments, edits changing only status or resolution markers (hash over a normalized body), resolved threads, outdated comments (context only), comments by anyone else; Experiment 2 fixtures confirm or correct each rule with one fixture test per rule; PRs open ready for review (not draft) with title `<issue-key>: <issue title>` and a body holding the criterion map and a `gaffer-job: <id>` marker. *Amended by R27 (Experiment 2): top-level inline comments only, section parsing with outside-diff dedupe, operator login excluding `gaffer-round:` comments, PR-body edits ignored, explicit normalization regex.*
 History: none
 
 ### R13: CI evidence in packet items
@@ -1347,7 +1347,7 @@ The writer receives a fine-grained GitHub token (actions:read, contents:read, pu
 
 State: approved
 Actual answer: A) gaffer fetches log tail (D18 answer, 2026-10-09)
-Accepted scope: gaffer fetches, with its own token, each failed required check's title and output summary, up to 50 annotations, and for GitHub Actions the failing job's last 200 log lines; caps 16 KB per check and 48 KB per packet; the R1 secret scanner runs over item text before it enters the packet; children still hold no GitHub token.
+Accepted scope: gaffer fetches, with its own token, each failed required check's title and output summary, up to 50 annotations, and for GitHub Actions the failing job's last 200 log lines; caps 16 KB per check and 48 KB per packet; the R1 secret scanner runs over item text before it enters the packet; children still hold no GitHub token. *Amended by R27: fetch logs via the API (or `gh api --allow-escape-sequences`) and strip ANSI codes before the tail and cap.*
 History: D17 (2026-10-09) offered A) Include log tail / B) Summary + annotations only. Actual answer (Other): "Is there another option… we could allow the writer access to selected hosts, such as GitHub? Also context7 for being able to read docs. What about installing deps, that would require pypi, npm, packagist". Split into this rebuilt R13 (adds option C, writer-held read-only token, since logs need auth) and a new R14 for the sandbox network allowlist (registries). Context7 is already permitted through R3's allowed_mcp (runs outside the sandbox; listed in the report), so it needs no new choice.
 
 ### R14: Sandbox network allowlist (dependency installs)
@@ -2081,7 +2081,31 @@ Actual answer: A) Add to TODOS.md (D33 answer, 2026-10-18)
 Accepted scope: Add a P1 item under ## Scheduler in TODOS.md: Approach B capacity scheduler daemon (quota-window model from measured usage, admission with tester/reviewer/repair reservations, overnight interval, daytime headroom), `agent-ready` pickup, launchd, Jasper/Telegram notifier, Linear write-back (deferred by D1), two-job limit; depends on the v0.1 demo (SC2-SC5) and Experiment 1 quota data. Effort XL.
 History: none
 
-Approval readiness: PASS. Checked: D1 (D1 answer), D2 (D2 answer), D3 (D3 answer), R1 (D4), R2 (D5), R3 (D7), R4 (D8), R5 (D9), R6 (D10), R7 (D11), R8 (D12), R9 (D13), R10 (D14), R11 (D15), R12 (D16), R13 (D18), R14 (D19), R15 (D20), R16 (D21), R17 (D22, subsumed by R25), R18 (D23), R19 (D24), R20 (D25), R21 (D26), R22 (D27), R24 (D29), R25 (D30), R26 (D31), T1 (D32), T2 (D33). Architecture #3 (argv-only, issue-key validation) carried by prior approval of the design Constraints. Unresolved: R23 (D28 = investigate first; no remedy approved).
+Approval readiness: PASS. Checked: D1 (D1 answer), D2 (D2 answer), D3 (D3 answer), R1 (D4), R2 (D5), R3 (D7), R4 (D8), R5 (D9), R6 (D10), R7 (D11), R8 (D12), R9 (D13), R10 (D14), R11 (D15), R12 (D16), R13 (D18), R14 (D19), R15 (D20), R16 (D21), R17 (D22, subsumed by R25), R18 (D23), R19 (D24), R20 (D25), R21 (D26), R22 (D27), R24 (D29), R25 (D30), R26 (D31), T1 (D32), T2 (D33), R27 (Mark, 2026-10-20, after Experiment 2). Architecture #3 (argv-only, issue-key validation) carried by prior approval of the design Constraints. Unresolved: R23 (D28 = investigate first; no remedy approved).
+
+### R27: Experiment 2 corrections (CodeRabbit completion and admission)
+Finding: Experiment 2 (`docs/experiments/coderabbit.md`, commit 93eb5a3), section 8 proposals; T2 fixtures in `tests/fixtures/coderabbit/`.
+Plan baseline: R12 accepted scope; design "Rounds and packets" and "CodeRabbit fallback"; Open Question 1 unanswered; R13 log tail via `gh api`.
+Runtime evidence: 23 Phase 1 heads across six PRs in three repos, plus 3 sandbox heads (`mfullbrook/gaffer-coderabbit-sandbox#1`). CodeRabbit posts no check runs; a `CodeRabbit` commit status is its last action on every reviewed head; `success` is also used for skipped, paused and approved; 30 CodeRabbit replies inside threads answered plain replies by Mark; gaffer's own comments carry Mark's login; CodeRabbit rewrites a release-notes block in the PR body on every push; failed-check text is only in the job log.
+
+| Choice | Before | After (approved) |
+|---|---|---|
+| CodeRabbit completion for head H (Open Question 1) | unknown; fallback "no new item for 10 min" | **verified**: a status on H with `context == "CodeRabbit"`, `creator.login == "coderabbitai[bot]"`, `state == "success"`, `description == "Review completed"` (exact match). `Review approved` is not completion. Unrecognized descriptions are logged verbatim and treated as not complete |
+| Skipped or paused head | undefined | `Review skipped…` or `Review paused` on the current head: CodeRabbit won't review it. Don't wait out the round timeout; complete the round with CodeRabbit **unverified** and name the reason in the report |
+| CodeRabbit never starts | falls through to review_timeout | no `CodeRabbit` status on H `coderabbit_appear_timeout` (default 10 min) after push: round completes with CodeRabbit **unverified**, report says "CodeRabbit never started on this head; the repo may not be covered by the app" (no `coderabbitai` check suite is the corroborating sign) |
+| Inline comments | CodeRabbit inline comments on unresolved, non-outdated threads | same, **top-level only**: a CodeRabbit comment with `in_reply_to_id` is context for its thread, never a new item, so a human thread reply can't open round seq+1 |
+| Review bodies | listed actionable sections | actionable sections are `⚠️ Outside diff range comments` and `🧹 Nitpick comments`; parse sections, not the "Actionable comments posted" header (it can be absent); dedupe an outside-diff entry against an open CodeRabbit thread on the same path with overlapping lines; a `Files not reviewed due to moderation or processing errors` section is named in the report |
+| Comments by Mark | comments by Mark | comments by the configured `operator_login` (gaffer.toml), **excluding** any comment with a line matching `^gaffer-round: `, since gaffer posts with the same login |
+| PR body | not considered | CodeRabbit's edits to the PR body are ignored; any reader of the PR body (R12 marker, R23) parses only text outside the `release notes by coderabbit.ai` markers |
+| Edit normalization | hash over a normalized body | before hashing, drop lines matching `✅ Addressed in commit(s) …`, `✅ Confirmed as addressed by @…` and `<!-- This is an auto-generated (comment\|reply) by CodeRabbit -->`; the regex lives with the `resolution_marker_edit` fixture |
+| R13 log fetch | `gh api` log tail | fetch logs with the API directly (or `gh api --allow-escape-sequences`), strip ANSI codes, then take the last 200 lines and cap from the end at 16 KB |
+| R9 round marker | `gaffer-round:` line | confirmed byte-identical through REST and GraphQL; CodeRabbit doesn't answer it; unchanged |
+| Timings | 60 s settle, 30 min round timeout, 10 min check_appear_timeout | unchanged; measured worst case push → `Review completed` was 14.2 min, and no admissible item arrived after `Review completed` |
+
+State: approved
+Actual answer: fold all Experiment 2 section 8 proposals into the plan (Mark, 2026-10-20)
+Accepted scope: the "After (approved)" column above. Each row gets a fixture test against `tests/fixtures/coderabbit/` in T8.
+History: amends R12 (admission, PR body), R13 (log fetch) and the design's "Rounds and packets" and "CodeRabbit fallback"; answers Open Question 1.
 
 ## v0.1 plan as amended by eng review
 
@@ -2122,10 +2146,11 @@ PUBLISH    gitleaks over diff (R15) → push, never force → PR ready-for-revie
            criterion map + gaffer-job marker (R12)
    ▼
 ROUND      AI-free polling; Codex review once per head; complete = required checks
-           concluded (R11) + Codex review + CodeRabbit done + 60 s settle; deadline in
-           supervised seconds (R25)
+           concluded (R11) + Codex review + CodeRabbit status "Review completed" (R27)
+           + 60 s settle; skipped/paused/never-started = CodeRabbit unverified (R27);
+           deadline in supervised seconds (R25)
    ▼
-PACKET     admitted items only (R12) + failed checks with log tail (R13) + failing tests (R8)
+PACKET     admitted items only (R12, R27) + failed checks with log tail (R13) + failing tests (R8)
    ▼
 RESUME     same session → gates → VERIFY → PUBLISH → one round summary comment with
            gaffer-round marker (D2, R9); cycles ≤ 3 + --more-cycles (R8)
@@ -2148,8 +2173,8 @@ READY (0) · BLOCKED (2) · CLOSED (3) → report.md; reruns: --adopt-head, --mo
 
 ### Build order (R26)
 
-1. Experiment 1: billing route. Record CLI versions and login-status output, and re-read the API billing pages the next day (R2). Also measure how much of a Pro 5-hour window one tester + writer + reviewer job uses (Step 0A).
-2. Experiment 2: CodeRabbit fixtures. Confirm that CodeRabbit reviews ready-for-review PRs and derive the admission rules (R12).
+1. ~~Experiment 1~~ **Done** (`docs/experiments/billing.md`; billing pages re-read and overage confirmed off by Mark, 2026-10-20): billing route. Record CLI versions and login-status output, and re-read the API billing pages the next day (R2). Also measure how much of a Pro 5-hour window one tester + writer + reviewer job uses (Step 0A).
+2. ~~Experiment 2~~ **Done** (`docs/experiments/coderabbit.md`, fixtures in `tests/fixtures/coderabbit/`, corrections in R27): CodeRabbit fixtures. Confirm that CodeRabbit reviews ready-for-review PRs and derive the admission rules (R12).
 3. Experiment 3: the vertical spike on two toy repos, one pytest and one Jest, written up in `docs/spike-results.md`. It must prove R2/R3 logins in gaffer's config dirs, R1/R14/R21 sandboxed commits in a job clone, R20 read denial for Codex children and test runs, R5/R22 red-first via JUnit, and R9 resume by pre-assigned ID. Any failure reopens its decision before module code starts.
 4. Build `config.py`, then `store.py`, `children.py`, `workspace.py` and `reviews.py` in parallel, then `runner.py`.
 5. After the spike passes: doctor (R18), eval (R19) and lost-state reconstruction (R9; R23 still under investigation).
@@ -2197,6 +2222,9 @@ READY (0) · BLOCKED (2) · CLOSED (3) → report.md; reruns: --adopt-head, --mo
 | Writer sandbox | `git commit` blocked by write root | job clone keeps .git inside the job dir (R21); spike proof | spike result; no runtime path |
 | Publish | Diff contains a token read from a log | gitleaks gate (R15); `test_security.py` | BLOCKED: secret_detected, finding redacted |
 | Round | CodeRabbit rewrites its walkthrough on push | admission ignores it (R12); fixture tests | none (no extra round) |
+| Round | Mark replies inside a CodeRabbit thread and CodeRabbit answers | replies with `in_reply_to_id` are thread context (R27); `inline_finding_open_thread` fixture | none (no extra round) |
+| Round | CodeRabbit pauses after 5 reviewed commits, or the repo isn't covered by the app | `Review paused` / no status in 10 min → round completes with CodeRabbit unverified (R27); `completion_signal` fixtures | READY report says CodeRabbit **unverified** and why |
+| Round | gaffer's own round comment read back as a Mark comment | `^gaffer-round: ` exclusion (R27); `round_marker_comment` fixture | none |
 | Round | gaffer crashes mid-round, rerun later | supervised-time deadline (R25), locks (R9); recovery table | job continues |
 | Lost state | state.db deleted | BLOCKED: state_lost; `--adopt-head` rebuild infers base and tester commit (R9); R23 unresolved | job resumes on inferred evidence: **known risk, not silent** (explicit flag) |
 
