@@ -1,0 +1,34 @@
+{
+  "id": "PRRT_kwDOVP5T9s6uP7se",
+  "isResolved": false,
+  "isOutdated": true,
+  "isCollapsed": false,
+  "resolvedBy": null,
+  "path": "app/inventory.py",
+  "line": null,
+  "originalLine": 9,
+  "comments": {
+    "nodes": [
+      {
+        "databaseId": 4322833445,
+        "author": {
+          "login": "coderabbitai"
+        },
+        "createdAt": "2026-10-20T08:10:47Z",
+        "lastEditedAt": null,
+        "outdated": true,
+        "commit": {
+          "oid": "cfc9e387e7784602b8db14e2d112bf6a3dab643e"
+        },
+        "originalCommit": {
+          "oid": "cfc9e387e7784602b8db14e2d112bf6a3dab643e"
+        },
+        "replyTo": null,
+        "userContentEdits": {
+          "totalCount": 0,
+          "nodes": []
+        }
+      }
+    ]
+  }
+}

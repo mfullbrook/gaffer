@@ -1,0 +1,12 @@
+{
+  "rule": "round_marker_comment",
+  "synthetic": false,
+  "verdict": "ignore",
+  "reason": "Posted with the operator's own token, so the author is mfullbrook, the same login mark_comment admits. It must be excluded by its marker line, not by author. Body returned byte-identical via REST and GraphQL; CodeRabbit neither replied nor reacted.",
+  "marker_line": "gaffer-round: exp2/73d64291eb50563707fca6819c70cfe4d01d4c44/1",
+  "byte_identical": true,
+  "source": {
+    "repo": "mfullbrook/gaffer-coderabbit-sandbox",
+    "pr": 1
+  }
+}

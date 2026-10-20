@@ -1,0 +1,19 @@
+{
+  "rule": "ci_failed_check",
+  "synthetic": false,
+  "verdict": "admit",
+  "reason": "Required check 'test' concluded failure on head 73d6429. output.title and output.summary are null and none of the 3 annotations carries the test error; only the log tail does (FAILED tests/test_inventory.py::test_last_n). Logs need an authenticated call and `gh api` refuses ANSI escapes without --allow-escape-sequences; ANSI codes stripped here.",
+  "item": {
+    "source": "ci",
+    "check_run_id": 118525936589,
+    "name": "test",
+    "conclusion": "failure",
+    "annotations": 3,
+    "log_tail_lines": 200,
+    "log_tail_bytes": 15562
+  },
+  "source": {
+    "repo": "mfullbrook/gaffer-coderabbit-sandbox",
+    "pr": 1
+  }
+}

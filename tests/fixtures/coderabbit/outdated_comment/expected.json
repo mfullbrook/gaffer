@@ -1,0 +1,14 @@
+{
+  "rule": "outdated_comment",
+  "synthetic": false,
+  "verdict": "context",
+  "reason": "isOutdated = true, isResolved = false: the lines under it were rewritten in 73d6429 without fixing the bug. REST shows line = null. Not admitted as an item (context only); CodeRabbit re-raised the same finding as a new thread on the new lines in the next round.",
+  "reraised_as": {
+    "review_comment_id": 4322897690,
+    "thread": "PRRT_kwDOVP5T9s6uQFa8"
+  },
+  "source": {
+    "repo": "mfullbrook/gaffer-coderabbit-sandbox",
+    "pr": 1
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "rule": "mark_comment",
+  "synthetic": false,
+  "verdict": "admit",
+  "reason": "Top-level PR comment by the operator login (mfullbrook) that carries no gaffer-round marker line. CodeRabbit neither replied nor reacted within 26 minutes.",
+  "source": {
+    "repo": "mfullbrook/gaffer-coderabbit-sandbox",
+    "pr": 1
+  }
+}

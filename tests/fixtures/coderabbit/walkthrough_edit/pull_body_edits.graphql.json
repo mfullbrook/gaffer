@@ -1,0 +1,41 @@
+{
+  "body": "Sandbox PR for gaffer Experiment 2 (CodeRabbit capture). Not for merge.\n\ngaffer-job: exp2\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n- **New Features**\n  - Added inventory tools for recording item names and quantities.\n  - Added quantity conversion with a fallback of zero for invalid input.\n  - Added support for retrieving the final entries in an inventory list.\n\n- **Tests**\n  - Added coverage for quantity conversion and retrieving recent inventory entries.\n  - Retained coverage for calculating total inventory quantity.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "lastEditedAt": "2026-10-20T08:31:31Z",
+  "userContentEdits": {
+    "totalCount": 4,
+    "nodes": [
+      {
+        "editedAt": "2026-10-20T08:31:31Z",
+        "createdAt": "2026-10-20T08:31:31Z",
+        "editor": {
+          "login": "coderabbitai"
+        },
+        "diff": "Sandbox PR for gaffer Experiment 2 (CodeRabbit capture). Not for merge.\n\ngaffer-job: exp2\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n- **New Features**\n  - Added inventory tools for recording item names and quantities.\n  - Added quantity conversion with a fallback of zero for invalid input.\n  - Added support for retrieving the final entries in an inventory list.\n\n- **Tests**\n  - Added coverage for quantity conversion and retrieving recent inventory entries.\n  - Retained coverage for calculating total inventory quantity.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->"
+      },
+      {
+        "editedAt": "2026-10-20T08:16:37Z",
+        "createdAt": "2026-10-20T08:16:37Z",
+        "editor": {
+          "login": "coderabbitai"
+        },
+        "diff": "Sandbox PR for gaffer Experiment 2 (CodeRabbit capture). Not for merge.\n\ngaffer-job: exp2\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n- **New Features**\n  - Added inventory tools for recording item names and quantities.\n  - Added quantity conversion with a safe fallback of zero for invalid input.\n  - Added support for retrieving inventory entries from a position near the end of the list.\n- **Tests**\n  - Added coverage for quantity conversion and retrieving recent inventory entries.\n  - Retained coverage for calculating total inventory quantity.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->"
+      },
+      {
+        "editedAt": "2026-10-20T08:09:32Z",
+        "createdAt": "2026-10-20T08:09:32Z",
+        "editor": {
+          "login": "coderabbitai"
+        },
+        "diff": "Sandbox PR for gaffer Experiment 2 (CodeRabbit capture). Not for merge.\n\ngaffer-job: exp2\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n\n## Summary by CodeRabbit\n\n- **New Features**\n  - Added inventory tools for recording items and quantities.\n  - Added quantity conversion with a safe fallback for invalid input.\n  - Added support for retrieving the most recent inventory entries.\n\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->"
+      },
+      {
+        "editedAt": "2026-10-19T17:28:13Z",
+        "createdAt": "2026-10-20T08:09:32Z",
+        "editor": {
+          "login": "mfullbrook"
+        },
+        "diff": "Sandbox PR for gaffer Experiment 2 (CodeRabbit capture). Not for merge.\n\ngaffer-job: exp2"
+      }
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "rule": "resolved_thread",
+  "synthetic": false,
+  "verdict": "ignore",
+  "reason": "isResolved = true. Thread resolved by mfullbrook via resolveReviewThread while its finding (mutable default) was still unfixed; CodeRabbit did not react or reopen. CodeRabbit resolves its own threads when it judges them addressed (resolvedBy coderabbitai[bot]).",
+  "cases": [
+    {
+      "thread": "PRRT_kwDOVP5T9s6uQFa8",
+      "resolved_by": "mfullbrook",
+      "outdated": false,
+      "verdict": "ignore"
+    },
+    {
+      "thread": "PRRT_kwDOVP5T9s6uP7si",
+      "resolved_by": "coderabbitai[bot]",
+      "outdated": true,
+      "verdict": "ignore"
+    }
+  ],
+  "source": {
+    "repo": "mfullbrook/gaffer-coderabbit-sandbox",
+    "pr": 1
+  }
+}

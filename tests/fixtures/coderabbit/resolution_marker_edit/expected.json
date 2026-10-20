@@ -1,0 +1,14 @@
+{
+  "rule": "resolution_marker_edit",
+  "synthetic": false,
+  "verdict": "ignore",
+  "reason": "CodeRabbit appended '✅ Addressed in commit 73d6429' to its own inline comment ~14s after the fixing push. Raw body hash changes; the hash over the normalized body (marker lines removed) does not, so this is not a new item.",
+  "raw_hash_changed": true,
+  "normalized_hash_equal": true,
+  "normalization": "^(✅ Addressed in commits? .*|✅ Confirmed as addressed by @\\S+.*|<!-- This is an auto-generated (comment|reply) by CodeRabbit -->)\\s*$",
+  "source": {
+    "repo": "mfullbrook/gaffer-coderabbit-sandbox",
+    "pr": 1,
+    "before_snapshot": "2026-10-20T081113Z-cfc9e387.json"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "rule": "walkthrough_edit",
+  "synthetic": false,
+  "verdict": "ignore",
+  "reason": "CodeRabbit's single summary comment (marker '<!-- This is an auto-generated comment: summarize by coderabbit.ai -->') is created once and edited in place (10 edits over 3 heads). Every version is housekeeping. CodeRabbit also appends a 'Summary by CodeRabbit' block to the PR body between '<!-- This is an auto-generated comment: release notes by coderabbit.ai -->' markers, 3 times; that edit is ignored too and leaves the 'gaffer-job: exp2' line intact.",
+  "cases": [
+    {
+      "ref": "issue_comment:6286245831",
+      "verdict": "ignore",
+      "edits": 10
+    },
+    {
+      "ref": "pull.body",
+      "verdict": "ignore",
+      "gaffer_job_marker_intact": true
+    }
+  ],
+  "source": {
+    "repo": "mfullbrook/gaffer-coderabbit-sandbox",
+    "pr": 1
+  }
+}

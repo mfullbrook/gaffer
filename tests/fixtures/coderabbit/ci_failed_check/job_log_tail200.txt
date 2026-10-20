@@ -1,0 +1,200 @@
+2026-10-20T08:15:52.7399793Z Metadata: read
+2026-10-20T08:15:52.7400703Z Packages: read
+2026-10-20T08:15:52.7401626Z ##[endgroup]
+2026-10-20T08:15:52.7404989Z Secret source: Actions
+2026-10-20T08:15:52.7406493Z Cache mode: write
+2026-10-20T08:15:52.7408309Z Prepare workflow directory
+2026-10-20T08:15:52.8228490Z Prepare all required actions
+2026-10-20T08:15:52.8300500Z Getting action download info
+2026-10-20T08:15:53.2033395Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-10-20T08:15:53.3118740Z Download action repository 'actions/setup-python@v5' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+2026-10-20T08:15:53.5020580Z Complete job name: test
+2026-10-20T08:15:53.5958730Z ##[group]Run actions/checkout@v4
+2026-10-20T08:15:53.5959662Z with:
+2026-10-20T08:15:53.5960225Z   repository: mfullbrook/gaffer-coderabbit-sandbox
+2026-10-20T08:15:53.5964582Z   token: ***
+2026-10-20T08:15:53.5965042Z   ssh-strict: true
+2026-10-20T08:15:53.5965523Z   ssh-user: git
+2026-10-20T08:15:53.5966014Z   persist-credentials: true
+2026-10-20T08:15:53.5966508Z   clean: true
+2026-10-20T08:15:53.5966968Z   sparse-checkout-cone-mode: true
+2026-10-20T08:15:53.5967519Z   fetch-depth: 1
+2026-10-20T08:15:53.5967959Z   fetch-tags: false
+2026-10-20T08:15:53.5968409Z   show-progress: true
+2026-10-20T08:15:53.5968866Z   lfs: false
+2026-10-20T08:15:53.5969288Z   submodules: false
+2026-10-20T08:15:53.5969746Z   set-safe-directory: true
+2026-10-20T08:15:53.5970262Z   allow-unsafe-pr-checkout: false
+2026-10-20T08:15:53.5971046Z ##[endgroup]
+2026-10-20T08:15:53.7364680Z Syncing repository: mfullbrook/gaffer-coderabbit-sandbox
+2026-10-20T08:15:53.7368026Z ##[group]Getting Git version info
+2026-10-20T08:15:53.7369579Z Working directory is '/home/runner/work/gaffer-coderabbit-sandbox/gaffer-coderabbit-sandbox'
+2026-10-20T08:15:53.7371585Z [command]/usr/bin/git version
+2026-10-20T08:15:53.7507547Z git version 2.55.0
+2026-10-20T08:15:53.7555828Z ##[endgroup]
+2026-10-20T08:15:53.7575841Z Temporarily overriding HOME='/home/runner/work/_temp/8d8889a4-d2cb-4945-9967-e2272195630e' before making global git config changes
+2026-10-20T08:15:53.7578882Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-20T08:15:53.7581300Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/gaffer-coderabbit-sandbox/gaffer-coderabbit-sandbox
+2026-10-20T08:15:53.7586715Z Deleting the contents of '/home/runner/work/gaffer-coderabbit-sandbox/gaffer-coderabbit-sandbox'
+2026-10-20T08:15:53.7590094Z ##[group]Initializing the repository
+2026-10-20T08:15:53.7591707Z [command]/usr/bin/git init /home/runner/work/gaffer-coderabbit-sandbox/gaffer-coderabbit-sandbox
+2026-10-20T08:15:53.7702295Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-10-20T08:15:53.7722431Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-10-20T08:15:53.8863529Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-10-20T08:15:53.8865822Z hint: call:
+2026-10-20T08:15:53.8866909Z hint:
+2026-10-20T08:15:53.8868032Z hint: 	git config --global init.defaultBranch <name>
+2026-10-20T08:15:53.8869366Z hint:
+2026-10-20T08:15:53.8870523Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-10-20T08:15:53.8872413Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-10-20T08:15:53.8873948Z hint:
+2026-10-20T08:15:53.8875160Z hint: 	git branch -m <name>
+2026-10-20T08:15:53.8876164Z hint:
+2026-10-20T08:15:53.8877379Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-10-20T08:15:53.8879720Z Initialized empty Git repository in /home/runner/work/gaffer-coderabbit-sandbox/gaffer-coderabbit-sandbox/.git/
+2026-10-20T08:15:53.8883340Z [command]/usr/bin/git remote add origin https://github.com/mfullbrook/gaffer-coderabbit-sandbox
+2026-10-20T08:15:53.8887028Z ##[endgroup]
+2026-10-20T08:15:53.8888512Z ##[group]Disabling automatic garbage collection
+2026-10-20T08:15:53.8889900Z [command]/usr/bin/git config --local gc.auto 0
+2026-10-20T08:15:53.8893033Z ##[endgroup]
+2026-10-20T08:15:53.8894579Z ##[group]Setting up auth
+2026-10-20T08:15:53.8896103Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-20T08:15:53.8900447Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-20T08:15:53.8955808Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-20T08:15:53.9023097Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-20T08:15:53.9273710Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-20T08:15:53.9314898Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-20T08:15:53.9573470Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-10-20T08:15:53.9619608Z ##[endgroup]
+2026-10-20T08:15:53.9621592Z ##[group]Fetching the repository
+2026-10-20T08:15:53.9632129Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +216ba605e971431f5647c8edcccf465d811edda0:refs/remotes/pull/1/merge
+2026-10-20T08:15:54.2762361Z From https://github.com/mfullbrook/gaffer-coderabbit-sandbox
+2026-10-20T08:15:54.2765274Z  * [new ref]         216ba605e971431f5647c8edcccf465d811edda0 -> pull/1/merge
+2026-10-20T08:15:54.2770607Z ##[endgroup]
+2026-10-20T08:15:54.2771866Z ##[group]Determining the checkout info
+2026-10-20T08:15:54.2773316Z ##[endgroup]
+2026-10-20T08:15:54.2774523Z [command]/usr/bin/git sparse-checkout disable
+2026-10-20T08:15:54.2777281Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-10-20T08:15:54.2833209Z ##[group]Checking out the ref
+2026-10-20T08:15:54.2845769Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/1/merge
+2026-10-20T08:15:54.2909726Z Note: switching to 'refs/remotes/pull/1/merge'.
+2026-10-20T08:15:54.2917006Z 
+2026-10-20T08:15:54.2918805Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-10-20T08:15:54.2921701Z changes and commit them, and you can discard any commits you make in this
+2026-10-20T08:15:54.2925138Z state without impacting any branches by switching back to a branch.
+2026-10-20T08:15:54.2927164Z 
+2026-10-20T08:15:54.2929331Z If you want to create a new branch to retain commits you create, you may
+2026-10-20T08:15:54.2932048Z do so (now or later) by using -c with the switch command. Example:
+2026-10-20T08:15:54.2933851Z 
+2026-10-20T08:15:54.2934982Z   git switch -c <new-branch-name>
+2026-10-20T08:15:54.2936469Z 
+2026-10-20T08:15:54.2939844Z Or undo this operation with:
+2026-10-20T08:15:54.2940444Z 
+2026-10-20T08:15:54.2940790Z   git switch -
+2026-10-20T08:15:54.2941284Z 
+2026-10-20T08:15:54.2942110Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-10-20T08:15:54.2943393Z 
+2026-10-20T08:15:54.2945154Z HEAD is now at 216ba60 Merge 73d64291eb50563707fca6819c70cfe4d01d4c44 into deaecab63615a0e1e6df397c3c3b038a4dc0fa8c
+2026-10-20T08:15:54.2949122Z ##[endgroup]
+2026-10-20T08:15:54.2979850Z [command]/usr/bin/git log -1 --format=%H
+2026-10-20T08:15:54.3011062Z 216ba605e971431f5647c8edcccf465d811edda0
+2026-10-20T08:15:54.3421889Z ##[group]Run actions/setup-python@v5
+2026-10-20T08:15:54.3422635Z with:
+2026-10-20T08:15:54.3423123Z   python-version: 3.12
+2026-10-20T08:15:54.3423678Z   check-latest: false
+2026-10-20T08:15:54.3429201Z   token: ***
+2026-10-20T08:15:54.3429698Z   update-environment: true
+2026-10-20T08:15:54.3430286Z   allow-prereleases: false
+2026-10-20T08:15:54.3430870Z   freethreaded: false
+2026-10-20T08:15:54.3431377Z ##[endgroup]
+2026-10-20T08:15:54.4892586Z ##[group]Installed versions
+2026-10-20T08:15:54.4945627Z (node:2075) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-20T08:15:54.4950738Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-20T08:15:54.4951793Z Successfully set up CPython (3.12.15)
+2026-10-20T08:15:54.4952778Z ##[endgroup]
+2026-10-20T08:15:54.5219414Z ##[group]Run pip install -r requirements.txt
+2026-10-20T08:15:54.5220758Z pip install -r requirements.txt
+2026-10-20T08:15:54.5613825Z shell: /usr/bin/bash -e {0}
+2026-10-20T08:15:54.5614733Z env:
+2026-10-20T08:15:54.5615352Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.15/x64
+2026-10-20T08:15:54.5616447Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.15/x64/lib/pkgconfig
+2026-10-20T08:15:54.5617505Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+2026-10-20T08:15:54.5618431Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+2026-10-20T08:15:54.5619389Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+2026-10-20T08:15:54.5620347Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.15/x64/lib
+2026-10-20T08:15:54.5621142Z ##[endgroup]
+2026-10-20T08:15:56.8227471Z Collecting pytest==8.3.3 (from -r requirements.txt (line 1))
+2026-10-20T08:15:56.8998816Z   Downloading pytest-8.3.3-py3-none-any.whl.metadata (7.5 kB)
+2026-10-20T08:15:56.9258640Z Collecting iniconfig (from pytest==8.3.3->-r requirements.txt (line 1))
+2026-10-20T08:15:56.9395573Z   Downloading iniconfig-2.3.1-py3-none-any.whl.metadata (2.8 kB)
+2026-10-20T08:15:56.9706816Z Collecting packaging (from pytest==8.3.3->-r requirements.txt (line 1))
+2026-10-20T08:15:56.9843544Z   Downloading packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+2026-10-20T08:15:57.0097699Z Collecting pluggy<2,>=1.5 (from pytest==8.3.3->-r requirements.txt (line 1))
+2026-10-20T08:15:57.0234694Z   Downloading pluggy-1.7.0-py3-none-any.whl.metadata (5.0 kB)
+2026-10-20T08:15:57.0418154Z Downloading pytest-8.3.3-py3-none-any.whl (342 kB)
+2026-10-20T08:15:57.1013181Z Downloading pluggy-1.7.0-py3-none-any.whl (27 kB)
+2026-10-20T08:15:57.1171574Z Downloading iniconfig-2.3.1-py3-none-any.whl (7.6 kB)
+2026-10-20T08:15:57.1336048Z Downloading packaging-26.3-py3-none-any.whl (129 kB)
+2026-10-20T08:15:57.2647497Z Installing collected packages: pluggy, packaging, iniconfig, pytest
+2026-10-20T08:15:57.6387336Z 
+2026-10-20T08:15:57.6400426Z Successfully installed iniconfig-2.3.1 packaging-26.3 pluggy-1.7.0 pytest-8.3.3
+2026-10-20T08:15:57.6982525Z ##[group]Run pytest -q
+2026-10-20T08:15:57.6982834Z pytest -q
+2026-10-20T08:15:57.7047579Z shell: /usr/bin/bash -e {0}
+2026-10-20T08:15:57.7048093Z env:
+2026-10-20T08:15:57.7048374Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.15/x64
+2026-10-20T08:15:57.7048841Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.15/x64/lib/pkgconfig
+2026-10-20T08:15:57.7049495Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+2026-10-20T08:15:57.7049911Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+2026-10-20T08:15:57.7050321Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+2026-10-20T08:15:57.7050729Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.15/x64/lib
+2026-10-20T08:15:57.7051070Z ##[endgroup]
+2026-10-20T08:15:58.1525952Z ..F                                                                      [100%]
+2026-10-20T08:15:58.1545526Z =================================== FAILURES ===================================
+2026-10-20T08:15:58.1546659Z _________________________________ test_last_n __________________________________
+2026-10-20T08:15:58.1547502Z 
+2026-10-20T08:15:58.1547936Z     def test_last_n():
+2026-10-20T08:15:58.1548586Z >       assert last_n([1, 2, 3, 4], 2) == [3, 4]
+2026-10-20T08:15:58.1549268Z E       assert [2, 3, 4] == [3, 4]
+2026-10-20T08:15:58.1549845Z E         
+2026-10-20T08:15:58.1550339Z E         At index 0 diff: 2 != 3
+2026-10-20T08:15:58.1550943Z E         Left contains one more item: 4
+2026-10-20T08:15:58.1551537Z E         
+2026-10-20T08:15:58.1552032Z E         Full diff:
+2026-10-20T08:15:58.1552631Z E           [
+2026-10-20T08:15:58.1553228Z E         +     2,
+2026-10-20T08:15:58.1553923Z E               3,
+2026-10-20T08:15:58.1554807Z E               4,
+2026-10-20T08:15:58.1555352Z E           ]
+2026-10-20T08:15:58.1555728Z 
+2026-10-20T08:15:58.1556126Z tests/test_inventory.py:13: AssertionError
+2026-10-20T08:15:58.1556891Z =========================== short test summary info ============================
+2026-10-20T08:15:58.1557910Z FAILED tests/test_inventory.py::test_last_n - assert [2, 3, 4] == [3, 4]
+2026-10-20T08:15:58.1558720Z   
+2026-10-20T08:15:58.1559247Z   At index 0 diff: 2 != 3
+2026-10-20T08:15:58.1559845Z   Left contains one more item: 4
+2026-10-20T08:15:58.1560403Z   
+2026-10-20T08:15:58.1560877Z   Full diff:
+2026-10-20T08:15:58.1561355Z     [
+2026-10-20T08:15:58.1561811Z   +     2,
+2026-10-20T08:15:58.1562281Z         3,
+2026-10-20T08:15:58.1562741Z         4,
+2026-10-20T08:15:58.1563199Z     ]
+2026-10-20T08:15:58.1563705Z 1 failed, 2 passed in 0.05s
+2026-10-20T08:15:58.1782465Z ##[error]Process completed with exit code 1.
+2026-10-20T08:15:58.1940454Z Post job cleanup.
+2026-10-20T08:15:58.2925220Z [command]/usr/bin/git version
+2026-10-20T08:15:58.2969745Z git version 2.55.0
+2026-10-20T08:15:58.3022075Z Temporarily overriding HOME='/home/runner/work/_temp/b618c134-665e-4d34-8d79-57885644d2b0' before making global git config changes
+2026-10-20T08:15:58.3025893Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-20T08:15:58.3029827Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/gaffer-coderabbit-sandbox/gaffer-coderabbit-sandbox
+2026-10-20T08:15:58.3108836Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-20T08:15:58.3186249Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-20T08:15:58.3508328Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-20T08:15:58.3561733Z http.https://github.com/.extraheader
+2026-10-20T08:15:58.3580596Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-10-20T08:15:58.3683690Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-20T08:15:58.4415838Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-20T08:15:58.5046661Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-20T08:15:58.5381628Z Cleaning up orphan processes
+2026-10-20T08:15:58.5681557Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

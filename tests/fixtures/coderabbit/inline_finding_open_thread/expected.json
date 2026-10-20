@@ -1,0 +1,16 @@
+{
+  "rule": "inline_finding_open_thread",
+  "synthetic": false,
+  "verdict": "admit",
+  "reason": "CodeRabbit top-level inline review comment (in_reply_to_id absent) on a thread that is unresolved and not outdated.",
+  "item_key": {
+    "source": "coderabbit",
+    "item_id": 4322833461
+  },
+  "source": {
+    "repo": "mfullbrook/gaffer-coderabbit-sandbox",
+    "pr": 1,
+    "snapshot": "2026-10-20T081113Z-cfc9e387.json",
+    "head": "cfc9e387e7784602b8db14e2d112bf6a3dab643e"
+  }
+}

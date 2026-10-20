@@ -1,0 +1,35 @@
+[
+  {
+    "url": "https://api.github.com/repos/mfullbrook/gaffer-coderabbit-sandbox/statuses/cfc9e387e7784602b8db14e2d112bf6a3dab643e",
+    "avatar_url": "https://avatars.githubusercontent.com/in/347564?v=4",
+    "id": 56766769936,
+    "node_id": "SC_kwDOVP5T9s8AAAANN5ArEA",
+    "state": "success",
+    "description": "Review skipped: draft pull request",
+    "target_url": null,
+    "context": "CodeRabbit",
+    "created_at": "2026-10-20T07:57:36Z",
+    "updated_at": "2026-10-20T07:57:36Z",
+    "creator": {
+      "login": "coderabbitai[bot]",
+      "id": 136622811,
+      "node_id": "BOT_kgDOCCSy2w",
+      "avatar_url": "https://avatars.githubusercontent.com/in/347564?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/coderabbitai%5Bbot%5D",
+      "html_url": "https://github.com/apps/coderabbitai",
+      "followers_url": "https://api.github.com/users/coderabbitai%5Bbot%5D/followers",
+      "following_url": "https://api.github.com/users/coderabbitai%5Bbot%5D/following{/other_user}",
+      "gists_url": "https://api.github.com/users/coderabbitai%5Bbot%5D/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/coderabbitai%5Bbot%5D/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/coderabbitai%5Bbot%5D/subscriptions",
+      "organizations_url": "https://api.github.com/users/coderabbitai%5Bbot%5D/orgs",
+      "repos_url": "https://api.github.com/users/coderabbitai%5Bbot%5D/repos",
+      "events_url": "https://api.github.com/users/coderabbitai%5Bbot%5D/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/coderabbitai%5Bbot%5D/received_events",
+      "type": "Bot",
+      "user_view_type": "public",
+      "site_admin": false
+    }
+  }
+]

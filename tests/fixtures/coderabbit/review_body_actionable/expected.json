@@ -1,0 +1,34 @@
+{
+  "rule": "review_body_actionable",
+  "synthetic": false,
+  "verdict": "admit",
+  "reason": "Admit each entry under the review body's '⚠️ Outside diff range comments (N)' block (and '🧹 Nitpick comments (N)', seen in Phase 1). Ignore every other section: 'Prompt to fix review comments', 'Prompt for AI Agents', 'Review info', 'Run configuration', 'Commits', 'Files selected for processing', 'Files skipped/ignored'.",
+  "cases": [
+    {
+      "review_id": 5582416328,
+      "file": "review_round1_no_body_findings.json",
+      "verdict": "ignore",
+      "reason": "Body has 'Actionable comments posted: 3' but no outside-diff or nitpick section; its three findings are the inline comments, admitted on their own."
+    },
+    {
+      "review_id": 5582496841,
+      "file": "review_round2_outside_diff_duplicate.json",
+      "verdict": "admit_deduplicate",
+      "duplicate_of": {
+        "review_comment_id": 4322833461,
+        "path": "app/inventory.py"
+      },
+      "reason": "One outside-diff entry (app/inventory.py:25, extra slice offset) restating the still-open inline thread on the same line. Admitting both double-counts one finding; dedupe on path + line range against open CodeRabbit threads."
+    },
+    {
+      "review_id": 5582638738,
+      "file": "review_round3_outside_diff_only.json",
+      "verdict": "admit",
+      "reason": "New finding (app/inventory.py:24-26, clamp slice start) delivered only in the body: the review has no inline comments and no 'Actionable comments posted' header line."
+    }
+  ],
+  "source": {
+    "repo": "mfullbrook/gaffer-coderabbit-sandbox",
+    "pr": 1
+  }
+}

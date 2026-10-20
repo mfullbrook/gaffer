@@ -1,0 +1,32 @@
+{
+  "rule": "status_edit",
+  "synthetic": false,
+  "verdict": "ignore",
+  "reason": "Edits that only flip the summary comment's review-status banner (draft 'Review skipped', then 'Currently processing new changes' on each push) carry no finding. Ignore all CodeRabbit issue-comment edits; R12's 'status comments' are versions of the one summary comment, not separate comments.",
+  "cases": [
+    {
+      "edited_at": "2026-10-20T07:57:35Z",
+      "banner": "review skipped (draft)",
+      "verdict": "ignore"
+    },
+    {
+      "edited_at": "2026-10-20T08:08:56Z",
+      "banner": "currently processing",
+      "verdict": "ignore"
+    },
+    {
+      "edited_at": "2026-10-20T08:15:59Z",
+      "banner": "currently processing",
+      "verdict": "ignore"
+    },
+    {
+      "edited_at": "2026-10-20T08:31:10Z",
+      "banner": "currently processing",
+      "verdict": "ignore"
+    }
+  ],
+  "source": {
+    "repo": "mfullbrook/gaffer-coderabbit-sandbox",
+    "pr": 1
+  }
+}

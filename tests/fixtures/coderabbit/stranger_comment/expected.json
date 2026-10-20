@@ -1,0 +1,11 @@
+{
+  "rule": "stranger_comment",
+  "synthetic": true,
+  "verdict": "ignore",
+  "reason": "Author is neither CodeRabbit nor the operator login. Listed in the report, never admitted. Synthetic: the sandbox is private, so no third party could comment; built from the real shape of mark_comment with user, ids, association and body replaced.",
+  "built_from": "issue_comment:6286685810",
+  "source": {
+    "repo": "mfullbrook/gaffer-coderabbit-sandbox",
+    "pr": 1
+  }
+}

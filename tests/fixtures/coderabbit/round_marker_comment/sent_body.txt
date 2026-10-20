@@ -1,0 +1,9 @@
+## gaffer round summary
+
+Round 1 on head 73d6429: 3 findings received.
+
+- fixed: bare except in parse_qty (73d6429)
+- open: mutable default in add_item
+- open: off-by-one in last_n
+
+gaffer-round: exp2/73d64291eb50563707fca6819c70cfe4d01d4c44/1

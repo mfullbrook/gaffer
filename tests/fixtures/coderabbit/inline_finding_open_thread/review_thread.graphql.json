@@ -1,0 +1,25 @@
+{
+  "id": "PRRT_kwDOVP5T9s6uP7sn",
+  "isResolved": false,
+  "isOutdated": false,
+  "resolvedBy": null,
+  "path": "app/inventory.py",
+  "line": 25,
+  "originalLine": 25,
+  "comments": {
+    "nodes": [
+      {
+        "databaseId": 4322833461,
+        "author": {
+          "login": "coderabbitai"
+        },
+        "createdAt": "2026-10-20T08:10:47Z",
+        "lastEditedAt": null,
+        "outdated": false,
+        "userContentEdits": {
+          "totalCount": 0
+        }
+      }
+    ]
+  }
+}

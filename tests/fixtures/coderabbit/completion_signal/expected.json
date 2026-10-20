@@ -1,0 +1,104 @@
+{
+  "rule": "completion_signal",
+  "synthetic": false,
+  "verdict": "complete_when",
+  "reason": "Commit status on the head SHA with context 'CodeRabbit', creator coderabbitai[bot], state 'success' and description 'Review completed'. Every finding for that head arrived before it. Any other description (skipped, paused) or a missing status is not completion.",
+  "signal": {
+    "endpoint": "GET /repos/{o}/{r}/commits/{head}/statuses",
+    "context": "CodeRabbit",
+    "state": "success",
+    "description": "Review completed"
+  },
+  "corroborating": "summary comment marker final_review_risk_coverage {\"coveredCommitId\": <head>, \"kind\": \"reviewed\"}, written 2-8s before the status",
+  "cases": [
+    {
+      "head": "47a28a8f0e50de3e10733f27e67a22f685dc827c",
+      "statuses": [],
+      "verdict": "no_signal",
+      "reason": "Pushed before the app covered the repo; nothing ever arrived."
+    },
+    {
+      "head": "cfc9e387e7784602b8db14e2d112bf6a3dab643e",
+      "at": "07:57:36Z",
+      "status": [
+        "success",
+        "Review skipped: draft pull request"
+      ],
+      "verdict": "not_complete"
+    },
+    {
+      "head": "cfc9e387e7784602b8db14e2d112bf6a3dab643e",
+      "at": "08:10:56Z",
+      "status": [
+        "success",
+        "Review completed"
+      ],
+      "verdict": "complete"
+    },
+    {
+      "head": "73d64291eb50563707fca6819c70cfe4d01d4c44",
+      "file": "combined_status_pending.json",
+      "status": [
+        "pending",
+        "Review in progress"
+      ],
+      "verdict": "not_complete",
+      "source_snapshot": "2026-10-20T081553Z-73d64291.json"
+    },
+    {
+      "head": "73d64291eb50563707fca6819c70cfe4d01d4c44",
+      "at": "08:18:50Z",
+      "status": [
+        "success",
+        "Review completed"
+      ],
+      "verdict": "complete"
+    },
+    {
+      "head": "7cbe02269a8201320c163fcd789dd478b7cf932a",
+      "at": "08:32:42Z",
+      "status": [
+        "success",
+        "Review completed"
+      ],
+      "verdict": "complete"
+    },
+    {
+      "synthetic": true,
+      "status": [
+        "success",
+        "Review paused"
+      ],
+      "verdict": "not_complete",
+      "reason": "Shape seen in Phase 1 (auto-pause after many reviewed commits); no review happens."
+    },
+    {
+      "synthetic": true,
+      "status_sequence": [
+        [
+          "success",
+          "Review approved"
+        ],
+        [
+          "success",
+          "Review completed"
+        ]
+      ],
+      "verdict": "complete",
+      "reason": "Phase 1: an approving review posts 'Review approved' then 'Review completed' ~2s apart; wait for the latter."
+    },
+    {
+      "synthetic": true,
+      "status": [
+        "success",
+        "Review skipped"
+      ],
+      "verdict": "not_complete",
+      "reason": "Older draft wording seen in Phase 1."
+    }
+  ],
+  "source": {
+    "repo": "mfullbrook/gaffer-coderabbit-sandbox",
+    "pr": 1
+  }
+}
