@@ -1,0 +1,69 @@
+### ro
+write job dir                                DENIED
+write source repo                            DENIED
+write $HOME                                  DENIED
+read canary                                  DENIED
+stat canary                                  DENIED
+read ~/.ssh/id_ed25519                       DENIED
+read ~/.ssh/config                           DENIED
+read ~/.config/gh/hosts.yml                  DENIED
+read ~/Library/Keychains/login.keychain-db   DENIED
+read ~/.claude/.credentials.json             DENIED
+read ~/.claude.json                          DENIED
+read ~/.codex/auth.json                      DENIED
+read ~/.gaffer/claude/.credentials.json      DENIED
+read ~/.gaffer/codex/auth.json               DENIED
+read job file                                ALLOWED
+read source repo file                        ALLOWED
+GET https://pypi.org/simple/pip/             000
+GET https://registry.npmjs.org/left-pad      000
+GET https://api.github.com/zen               000
+GET https://example.com/                     000
+proxy env                                    0
+exit=0
+### test
+write job dir                                ALLOWED
+write source repo                            ALLOWED
+write $HOME                                  DENIED
+read canary                                  DENIED
+stat canary                                  DENIED
+read ~/.ssh/id_ed25519                       DENIED
+read ~/.ssh/config                           DENIED
+read ~/.config/gh/hosts.yml                  DENIED
+read ~/Library/Keychains/login.keychain-db   DENIED
+read ~/.claude/.credentials.json             DENIED
+read ~/.claude.json                          DENIED
+read ~/.codex/auth.json                      DENIED
+read ~/.gaffer/claude/.credentials.json      DENIED
+read ~/.gaffer/codex/auth.json               DENIED
+read job file                                ALLOWED
+read source repo file                        ALLOWED
+GET https://pypi.org/simple/pip/             000
+GET https://registry.npmjs.org/left-pad      000
+GET https://api.github.com/zen               000
+GET https://example.com/                     000
+proxy env                                    0
+exit=0
+### install
+write job dir                                ALLOWED
+write source repo                            ALLOWED
+write $HOME                                  DENIED
+read canary                                  DENIED
+stat canary                                  DENIED
+read ~/.ssh/id_ed25519                       DENIED
+read ~/.ssh/config                           DENIED
+read ~/.config/gh/hosts.yml                  DENIED
+read ~/Library/Keychains/login.keychain-db   DENIED
+read ~/.claude/.credentials.json             DENIED
+read ~/.claude.json                          DENIED
+read ~/.codex/auth.json                      DENIED
+read ~/.gaffer/claude/.credentials.json      DENIED
+read ~/.gaffer/codex/auth.json               DENIED
+read job file                                ALLOWED
+read source repo file                        ALLOWED
+GET https://pypi.org/simple/pip/             200
+GET https://registry.npmjs.org/left-pad      200
+GET https://api.github.com/zen               200
+GET https://example.com/                     200
+proxy env                                    0
+exit=0

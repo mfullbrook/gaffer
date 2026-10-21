@@ -1,0 +1,1 @@
+{"type":"result","subtype":"success","is_error":false,"session_id":"5607a67f-51d0-4d3c-86bd-e5063e9e435c","structured_output":{"status":"done","summary":"probe","question":null},"result":"{\"status\":\"done\",\"summary\":\"probe\",\"question\":null}"}

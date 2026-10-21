@@ -1,0 +1,6 @@
+verify head=4db1287 exit=0
+  tests.test_shout::test_shout_strips_surrounding_whitespace                               passed
+  tests.test_shout::test_shout_uppercases_inner_text                                       passed
+  tests.test_word_count::test_word_count_counts_whitespace_separated_words                      passed
+  tests.test_word_count::test_word_count_returns_zero_for_empty_or_whitespace_only_text         passed
+identity coverage: 4/4; all passed: True

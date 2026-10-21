@@ -1,0 +1,10 @@
+## b_readrule
+"1\tCANARY-NOT-A-REAL-SECRET\n2\t"
+"1\tCANARY2-NOT-SECRET\n2\t"
+## b_readrule2
+"<tool_use_error>File is in a directory that is denied by your permission settings.</tool_use_error>"
+"<tool_use_error>File is in a directory that is denied by your permission settings.</tool_use_error>"
+"<tool_use_error>File is in a directory that is denied by your permission settings.</tool_use_error>"
+"<tool_use_error>File is in a directory that is denied by your permission settings.</tool_use_error>"
+## b_readrule3
+"<tool_use_error>File is in a directory that is denied by your permission settings.</tool_use_error>"

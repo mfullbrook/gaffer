@@ -1,0 +1,9 @@
+exit 0: /bin/zsh -lc 'bash ~/projects/gaffer/spike/c_child_probe.sh'
+DENIED   Users/mark/~~/.gaffer-spike-canary/fake_token
+DENIED   Users/mark/~~/.ssh/config
+DENIED   Users/mark/~~/.ssh/id_ed25519
+DENIED   Users/mark/~~/.config/gh/hosts.yml
+DENIED   Users/mark/~~/.gaffer/codex/auth.json
+DENIED   Users/mark/~~/.codex/auth.json
+READABLE Users/mark/~.gitignore
+

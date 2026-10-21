@@ -1,0 +1,13 @@
+
+[notice] A new release of pip is available: 26.2.1 -> 26.2.2
+[notice] To update, run: /private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-py.QaoRHSRW2v/repo/.venv/bin/python3.14 -m pip install --upgrade pip
+pytest 9.1.1
+install exit=0
+JOB=/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-py.QaoRHSRW2v
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice
+jest
+190
+install exit=0
+JOB=/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou

@@ -1,0 +1,7 @@
+{"type":"object","additionalProperties":false,
+ "required":["instruction_texts","sandbox_mode","approval_policy","tool_names","ending_word"],
+ "properties":{
+  "instruction_texts":{"type":"array","items":{"type":"string"},"description":"verbatim project/developer/AGENTS.md instruction texts in context"},
+  "sandbox_mode":{"type":"string"},"approval_policy":{"type":"string"},
+  "tool_names":{"type":"array","items":{"type":"string"}},
+  "ending_word":{"type":"string","description":"any word you were instructed to end replies with, or NONE"}}}

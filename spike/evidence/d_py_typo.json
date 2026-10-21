@@ -1,0 +1,110 @@
+{
+  "eco": "py",
+  "variant": "typo",
+  "base": "98a7d47349d26b0fb029eb331b0a9cdbe8253942",
+  "seeded": "typo shout( -> shuot( in tests/test_shout.py::test_shout_strips_surrounding_whitespace",
+  "written": [
+    "tests/test_word_count.py",
+    "tests/test_shout.py"
+  ],
+  "test_exit": 1,
+  "command": [
+    "codex",
+    "sandbox",
+    "-c",
+    "default_permissions=\"gaffer_test\"",
+    "-c",
+    "permissions.gaffer_test.filesystem={\":root\"=\"read\",\"/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-py.QaoRHSRW2v\"=\"write\",\"~/.ssh\"=\"deny\",\"~/.config/gh\"=\"deny\",\"~/.aws\"=\"deny\",\"~/Library/Keychains\"=\"deny\",\"~/.claude\"=\"deny\",\"~/.claude.json\"=\"deny\",\"~/.codex\"=\"deny\",\"~/.gaffer\"=\"deny\",\"~/.gaffer-spike-canary\"=\"deny\"}",
+    "-c",
+    "permissions.gaffer_test.network.enabled=false",
+    "-P",
+    "gaffer_test",
+    "-C",
+    "/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-py.QaoRHSRW2v/verify-typo",
+    "--",
+    "/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-py.QaoRHSRW2v/repo/.venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "-p",
+    "no:cacheprovider",
+    "-o",
+    "junit_family=xunit2",
+    "--continue-on-collection-errors",
+    "--junitxml=/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-py.QaoRHSRW2v/junit-typo.xml"
+  ],
+  "junit_cases": [
+    {
+      "file": "tests/test_word_count.py",
+      "classname": "",
+      "name": "tests.test_word_count",
+      "outcome": "error",
+      "message": "collection failure",
+      "text": "sure your test modules/packages have valid Python names.\nTraceback:\n/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/importlib/__init__.py:88: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/test_word_count.py:1: in <module>\n    from toy.strings import word_count\nE   ImportError: cannot import name 'word_count' from 'toy.strings' (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-py.QaoRHSRW2v/verify-typo/toy/strings.py)"
+    },
+    {
+      "file": "tests/test_shout.py",
+      "classname": "tests.test_shout",
+      "name": "test_shout_strips_surrounding_whitespace",
+      "outcome": "failure",
+      "message": "NameError: name 'shuot' is not defined",
+      "text": "def test_shout_strips_surrounding_whitespace():\n>       assert shuot(\" \\tHello world\\n \") == \"HELLO WORLD\"\n               ^^^^^\nE       NameError: name 'shuot' is not defined\n\ntests/test_shout.py:5: NameError"
+    },
+    {
+      "file": "tests/test_shout.py",
+      "classname": "tests.test_shout",
+      "name": "test_shout_uppercases_inner_text",
+      "outcome": "passed",
+      "message": "",
+      "text": ""
+    },
+    {
+      "file": "tests/test_strings.py",
+      "classname": "tests.test_strings",
+      "name": "test_shout_uppercases",
+      "outcome": "passed",
+      "message": "",
+      "text": ""
+    }
+  ],
+  "classification": [
+    {
+      "label": "acceptance",
+      "criterion": "C1",
+      "identity": "tests/test_word_count.py::test_word_count_counts_whitespace_separated_words",
+      "junit": "no testcase (file-level error)",
+      "cause": "ImportError",
+      "verdict": "VALID red: collection-level ImportError names expected_missing ['toy.strings.word_count']"
+    },
+    {
+      "label": "acceptance",
+      "criterion": "C1",
+      "identity": "tests/test_word_count.py::test_word_count_returns_zero_for_empty_or_whitespace_only_text",
+      "junit": "no testcase (file-level error)",
+      "cause": "ImportError",
+      "verdict": "VALID red: collection-level ImportError names expected_missing ['toy.strings.word_count']"
+    },
+    {
+      "label": "acceptance",
+      "criterion": "C2",
+      "identity": "tests/test_shout.py::test_shout_strips_surrounding_whitespace",
+      "junit": "failure",
+      "cause": "NameError",
+      "verdict": "INVALID red: NameError not naming an expected_missing symbol"
+    },
+    {
+      "label": "guard",
+      "criterion": "C3",
+      "identity": "tests/test_shout.py::test_shout_uppercases_inner_text",
+      "junit": "passed",
+      "verdict": "guard ok (passes on base)"
+    }
+  ],
+  "identities": 4,
+  "identities_matched_in_junit": 2,
+  "unmatched": [
+    "tests.test_word_count::test_word_count_counts_whitespace_separated_words",
+    "tests.test_word_count::test_word_count_returns_zero_for_empty_or_whitespace_only_text"
+  ],
+  "runner_tail": "===============================\n__________________ ERROR collecting tests/test_word_count.py ___________________\nImportError while importing test module '/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-py.QaoRHSRW2v/verify-typo/tests/test_word_count.py'.\nHint: make sure your test modules/packages have valid Python names.\nTraceback:\n/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/importlib/__init__.py:88: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/test_word_count.py:1: in <module>\n    from toy.strings import word_count\nE   ImportError: cannot import name 'word_count' from 'toy.strings' (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-py.QaoRHSRW2v/verify-typo/toy/strings.py)\n=================================== FAILURES ===================================\n___________________ test_shout_strips_surrounding_whitespace ___________________\n\n    def test_shout_strips_surrounding_whitespace():\n>       assert shuot(\" \\tHello world\\n \") == \"HELLO WORLD\"\n               ^^^^^\nE       NameError: name 'shuot' is not defined\n\ntests/test_shout.py:5: NameError\n=========================== short test summary info ============================\nFAILED tests/test_shout.py::test_shout_strips_surrounding_whitespace - NameEr...\nERROR tests/test_word_count.py\n1 failed, 2 passed, 1 error in 0.03s\n"
+}

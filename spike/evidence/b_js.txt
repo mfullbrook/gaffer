@@ -1,0 +1,54 @@
+Step 1 output:
+
+```
+## env
+pwd                                          /private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job-js.Qwwj0gryok/repo
+TMPDIR                                       /tmp/claude-501
+sandbox env                                  1
+## writes
+write job clone                              ALLOWED
+write source repo                            DENIED
+write source .git/hooks                      DENIED
+write $HOME                                  DENIED
+write ~/.gaffer                              DENIED
+## reads (head -c 0 opens the file; stat reads metadata only)
+read canary (head -c 0)                      DENIED
+stat canary                                  DENIED
+list canary dir                              DENIED
+read ~/.ssh/id_ed25519                       absent-or-unstatable
+read ~/.ssh/id_rsa                           absent-or-unstatable
+read ~/.ssh/config                           absent-or-unstatable
+read ~/.config/gh/hosts.yml                  absent-or-unstatable
+read ~/.aws/credentials                      absent-or-unstatable
+read ~/Library/Keychains/login.keychain-db   absent-or-unstatable
+read ~/.claude/.credentials.json             absent-or-unstatable
+read ~/.claude.json                          DENIED
+read ~/.codex/auth.json                      absent-or-unstatable
+read ~/.gaffer/claude/.credentials.json      absent-or-unstatable
+read ~/.gaffer/codex/auth.json               absent-or-unstatable
+ls ~/.ssh                                    DENIED
+## network
+GET https://pypi.org/simple/pip/             200
+GET https://files.pythonhosted.org/          404
+GET https://registry.npmjs.org/left-pad      200
+GET https://api.github.com/zen               000
+GET https://example.com/                     000
+GET https://github.com/                      000
+git ls-remote origin (fake GitHub)           DENIED
+## dependency install (js)
+npm install (jest, jest-junit)               ok (190 packages)
+## git commit in job clone
+git commit                                   ok 5defdba
+<sandbox_violations>
+deny network-outbound api.github.com:443 (user denied)
+deny network-outbound example.com:443 (user denied)
+deny network-outbound github.com:443 (user denied)
+deny network-outbound github.com:443 (user denied)
+</sandbox_violations>
+```
+
+- **Step 2** (Read `~/.gaffer-spike-canary/fake_token`): DENIED. Permission wasn't granted.
+- **Step 3** (Write `~/.probe_write_tool.txt`): DENIED. Permission wasn't granted.
+- **Step 4** (Write `/var/folders/.../gaffer-spike-js.vtM76arvi2/.probe_write_tool.txt`): DENIED. Permission wasn't granted.
+
+I didn't retry any of the denied steps.

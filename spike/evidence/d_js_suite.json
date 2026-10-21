@@ -1,0 +1,114 @@
+{
+  "eco": "js",
+  "variant": "suite",
+  "base": "1c293d3c5712279438d2e431e4d2c8fdb24e6449",
+  "seeded": "missing module require added to top of __tests__/shout.test.js",
+  "written": [
+    "__tests__/wordCount.test.js",
+    "__tests__/shout.test.js"
+  ],
+  "test_exit": 1,
+  "command": [
+    "codex",
+    "sandbox",
+    "-c",
+    "default_permissions=\"gaffer_test\"",
+    "-c",
+    "permissions.gaffer_test.filesystem={\":root\"=\"read\",\"/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou\"=\"write\",\"~/.ssh\"=\"deny\",\"~/.config/gh\"=\"deny\",\"~/.aws\"=\"deny\",\"~/Library/Keychains\"=\"deny\",\"~/.claude\"=\"deny\",\"~/.claude.json\"=\"deny\",\"~/.codex\"=\"deny\",\"~/.gaffer\"=\"deny\",\"~/.gaffer-spike-canary\"=\"deny\"}",
+    "-c",
+    "permissions.gaffer_test.network.enabled=false",
+    "-P",
+    "gaffer_test",
+    "-C",
+    "/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/verify-suite",
+    "--",
+    "/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/verify-suite/node_modules/.bin/jest",
+    "--ci",
+    "--no-watchman",
+    "--reporters=default",
+    "--reporters=jest-junit"
+  ],
+  "junit_cases": [
+    {
+      "file": "__tests__/wordCount.test.js",
+      "classname": "__tests__/wordCount.test.js",
+      "name": "wordCount counts words separated by mixed whitespace",
+      "outcome": "failure",
+      "message": "",
+      "text": "TypeError: wordCount is not a function\n    at Object.wordCount (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/verify-suite/__tests__/wordCount.test.js:5:12)\n    at Promise.finally.completed (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/repo/node_modules/jest-circus/build/jestAdapterInit.js:1834:28)\n    at new Promise (<anonymous>)\n    at callAsyncCircusFn (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/repo/node_modules/jest-circus/build/jestAdapterInit.js:1774:10)\n    at _callCircusTest (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/repo/node_modules/jest-circus/build/jestAdapterInit.js:1167:40)\n    at processTicksAndRe"
+    },
+    {
+      "file": "__tests__/wordCount.test.js",
+      "classname": "__tests__/wordCount.test.js",
+      "name": "wordCount returns zero for empty and whitespace-only text",
+      "outcome": "failure",
+      "message": "",
+      "text": "TypeError: wordCount is not a function\n    at Object.wordCount (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/verify-suite/__tests__/wordCount.test.js:10:12)\n    at Promise.finally.completed (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/repo/node_modules/jest-circus/build/jestAdapterInit.js:1834:28)\n    at new Promise (<anonymous>)\n    at callAsyncCircusFn (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/repo/node_modules/jest-circus/build/jestAdapterInit.js:1774:10)\n    at _callCircusTest (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/repo/node_modules/jest-circus/build/jestAdapterInit.js:1167:40)\n    at processTicksAndR"
+    },
+    {
+      "file": "__tests__/shout.test.js",
+      "classname": "Test suite failed to run",
+      "name": "__tests__/shout.test.js",
+      "outcome": "error",
+      "message": "",
+      "text": "  \u25cf Test suite failed to run\n\n    Cannot find module '../src/does-not-exist' from '__tests__/shout.test.js'\n\n    > 1 | const helper = require('../src/does-not-exist');\n        |                ^\n      2 | const { shout } = require('../src/strings');\n      3 |\n      4 | describe('shout', () => {\n\n      at Resolver._throwModNotFoundError (../repo/node_modules/jest-resolve/build/index.js:1031:11)\n      at Object.require (__tests__/shout.test.js:1:16)\n"
+    },
+    {
+      "file": "__tests__/shout.test.js",
+      "classname": "Test suite failed to run",
+      "name": "__tests__/shout.test.js",
+      "outcome": "failure",
+      "message": "",
+      "text": "{\"code\":\"MODULE_NOT_FOUND\",\"hint\":\"\",\"requireStack\":[\"/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/verify-suite/__tests__/shout.test.js\"],\"siblingWithSimilarExtensionFound\":false,\"moduleName\":\"../src/does-not-exist\",\"_originalMessage\":\"Cannot find module '../src/does-not-exist' from '__tests__/shout.test.js'\"}"
+    },
+    {
+      "file": "__tests__/strings.test.js",
+      "classname": "__tests__/strings.test.js",
+      "name": " shout uppercases",
+      "outcome": "passed",
+      "message": "",
+      "text": ""
+    }
+  ],
+  "classification": [
+    {
+      "label": "acceptance",
+      "criterion": "C1",
+      "identity": "__tests__/wordCount.test.js::wordCount counts words separated by mixed whitespace",
+      "junit": "failure",
+      "cause": "TypeError",
+      "verdict": "VALID red: TypeError names expected_missing ['wordCount']"
+    },
+    {
+      "label": "acceptance",
+      "criterion": "C1",
+      "identity": "__tests__/wordCount.test.js::wordCount returns zero for empty and whitespace-only text",
+      "junit": "failure",
+      "cause": "TypeError",
+      "verdict": "VALID red: TypeError names expected_missing ['wordCount']"
+    },
+    {
+      "label": "acceptance",
+      "criterion": "C2",
+      "identity": "__tests__/shout.test.js::shout trims surrounding whitespace before upper-casing",
+      "junit": "no testcase (file-level error)",
+      "cause": "unknown",
+      "verdict": "INVALID red: collection-level unknown not naming expected_missing"
+    },
+    {
+      "label": "guard",
+      "criterion": "C3",
+      "identity": "__tests__/shout.test.js::shout upper-cases inner text while preserving inner whitespace",
+      "junit": "no testcase (file-level error)",
+      "cause": "unknown",
+      "verdict": "INVALID red: collection-level unknown not naming expected_missing"
+    }
+  ],
+  "identities": 4,
+  "identities_matched_in_junit": 2,
+  "unmatched": [
+    "__tests__/shout.test.js::shout trims surrounding whitespace before upper-casing",
+    "__tests__/shout.test.js::shout upper-cases inner text while preserving inner whitespace"
+  ],
+  "runner_tail": "space\n\n    TypeError: wordCount is not a function\n\n      3 | describe('wordCount', () => {\n      4 |   test('counts words separated by mixed whitespace', () => {\n    > 5 |     expect(wordCount(' \\talpha  beta\\tgamma\\ndelta\\r\\nepsilon ')).toBe(5);\n        |            ^\n      6 |     expect(wordCount('hello')).toBe(1);\n      7 |   });\n      8 |\n\n      at Object.wordCount (__tests__/wordCount.test.js:5:12)\n\n  \u25cf wordCount \u203a returns zero for empty and whitespace-only text\n\n    TypeError: wordCount is not a function\n\n       8 |\n       9 |   test('returns zero for empty and whitespace-only text', () => {\n    > 10 |     expect(wordCount('')).toBe(0);\n         |            ^\n      11 |     expect(wordCount(' \\t\\n\\r ')).toBe(0);\n      12 |   });\n      13 | });\n\n      at Object.wordCount (__tests__/wordCount.test.js:10:12)\n\nFAIL __tests__/shout.test.js\n  \u25cf Test suite failed to run\n\n    Cannot find module '../src/does-not-exist' from '__tests__/shout.test.js'\n\n    > 1 | const helper = require('../src/does-not-exist');\n        |                ^\n      2 | const { shout } = require('../src/strings');\n      3 |\n      4 | describe('shout', () => {\n\n      at Resolver._throwModNotFoundError (../repo/node_modules/jest-resolve/build/index.js:1031:11)\n      at Object.require (__tests__/shout.test.js:1:16)\n\nPASS __tests__/strings.test.js\n\nTest Suites: 2 failed, 1 passed, 3 total\nTests:       2 failed, 1 passed, 3 total\nSnapshots:   0 total\nTime:        0.162 s, estimated 1 s\nRan all test suites.\n"
+}

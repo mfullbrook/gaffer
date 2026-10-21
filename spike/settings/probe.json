@@ -1,0 +1,5 @@
+{
+  "permissions": {
+    "deny": ["WebFetch", "WebSearch", "mcp__claude_ai_Linear", "mcp__linear", "mcp__plugin_linear_linear"]
+  }
+}

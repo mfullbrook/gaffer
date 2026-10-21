@@ -1,0 +1,5 @@
+(version 1)
+(allow default)
+(deny file-read* (subpath "/Users/mark/.ssh") (subpath "/Users/mark/.config/gh") (subpath "/Users/mark/.aws") (subpath "/Users/mark/Library/Keychains")
+                 (subpath "/Users/mark/.claude") (literal "/Users/mark/.claude.json") (subpath "/Users/mark/.codex") (subpath "/Users/mark/.gaffer") (subpath "/Users/mark/.gaffer-spike-canary"))
+(deny network*)

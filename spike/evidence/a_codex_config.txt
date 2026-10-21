@@ -1,0 +1,24 @@
+## c1
+{"instruction_texts":["# Agent instructions\nEnd every reply with the exact word KIWI-AGENTSMD."],"sandbox_mode":"read-only","ending_word":"KIWI-AGENTSMD"}
+{"approval_policy":"never","sandbox_policy":{"type":"read-only"}}
+agents_md: "{\"directory\":\"/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-py.iopT4l2iVR\",\"text\":\"# Agent instructions\"
+skills offered: 73 roots: - `r0` = `~/.agents/skills` - `r1` = `~/.gaffer/codex/skills/.system` - `r2` = `~/.gaffer/codex/plugins/cache/openai-curated-remote` - `r3` = `~/.gaffer/codex/plugins/cache/openai-curated-remote/sites/1.1.0/skills` - `r4` = `~/.gaffer/codex/plugins/cache/openai-curated-remote/work-pets/0.1.6/skills` 
+BANANA-CODEXCFG occurrences: 0  KIWI-AGENTSMD occurrences: 5
+## c2
+{"instruction_texts":["I can’t disclose hidden developer instructions verbatim. No project or AGENTS.md instruction text was provided."],"sandbox_mode":"read-only","ending_word":"NONE"}
+{"approval_policy":"never","sandbox_policy":{"type":"read-only"}}
+agents_md: "{}"
+skills offered: 66 roots: - `r0` = `~/.agents/skills` - `r1` = `~/.gaffer/codex/skills/.system` 
+BANANA-CODEXCFG occurrences: 0  KIWI-AGENTSMD occurrences: 0
+## c3
+{"instruction_texts":["You are Codex, an agent based on GPT-6. You and the user share one workspace, and your job is to collaborate with them until their intended goal is completely handled.\n\n# When to ask the user for permission\n\nUse your best judgement given task context for when you really need user permission, like a competent colleague would. Once evidence in a session supports authorizat …[truncated]
+{"approval_policy":"never","sandbox_policy":{"type":"read-only"}}
+agents_md: "{}"
+skills offered: 0 roots: 
+BANANA-CODEXCFG occurrences: 0  KIWI-AGENTSMD occurrences: 0
+## c4
+{"instruction_texts":["I can’t provide verbatim developer instructions. No project or AGENTS.md instruction text was provided."],"sandbox_mode":"read-only","ending_word":"NONE"}
+{"approval_policy":"never","sandbox_policy":{"type":"read-only"}}
+agents_md: "{}"
+skills offered: 4 roots: - `r0` = `~/.gaffer/codex/skills/.system` 
+BANANA-CODEXCFG occurrences: 0  KIWI-AGENTSMD occurrences: 0

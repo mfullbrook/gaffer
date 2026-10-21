@@ -1,0 +1,12 @@
+{"type":"object","additionalProperties":false,
+ "required":["criteria","tests","expected_missing","files"],
+ "properties":{
+  "criteria":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["id","text"],
+     "properties":{"id":{"type":"string"},"text":{"type":"string"}}}},
+  "tests":{"type":"array","items":{"type":"object","additionalProperties":false,
+     "required":["criterion_id","label","file","classname","name"],
+     "properties":{"criterion_id":{"type":"string"},"label":{"type":"string","enum":["acceptance","guard"]},
+       "file":{"type":"string"},"classname":{"type":"string"},"name":{"type":"string"}}}},
+  "expected_missing":{"type":"array","items":{"type":"string"}},
+  "files":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["path","content"],
+     "properties":{"path":{"type":"string"},"content":{"type":"string"}}}}}}

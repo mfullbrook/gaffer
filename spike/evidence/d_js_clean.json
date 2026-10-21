@@ -1,0 +1,110 @@
+{
+  "eco": "js",
+  "variant": "clean",
+  "base": "1c293d3c5712279438d2e431e4d2c8fdb24e6449",
+  "seeded": "none",
+  "written": [
+    "__tests__/wordCount.test.js",
+    "__tests__/shout.test.js"
+  ],
+  "test_exit": 1,
+  "command": [
+    "codex",
+    "sandbox",
+    "-c",
+    "default_permissions=\"gaffer_test\"",
+    "-c",
+    "permissions.gaffer_test.filesystem={\":root\"=\"read\",\"/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou\"=\"write\",\"~/.ssh\"=\"deny\",\"~/.config/gh\"=\"deny\",\"~/.aws\"=\"deny\",\"~/Library/Keychains\"=\"deny\",\"~/.claude\"=\"deny\",\"~/.claude.json\"=\"deny\",\"~/.codex\"=\"deny\",\"~/.gaffer\"=\"deny\",\"~/.gaffer-spike-canary\"=\"deny\"}",
+    "-c",
+    "permissions.gaffer_test.network.enabled=false",
+    "-P",
+    "gaffer_test",
+    "-C",
+    "/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/verify-clean",
+    "--",
+    "/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/verify-clean/node_modules/.bin/jest",
+    "--ci",
+    "--no-watchman",
+    "--reporters=default",
+    "--reporters=jest-junit"
+  ],
+  "junit_cases": [
+    {
+      "file": "__tests__/shout.test.js",
+      "classname": "__tests__/shout.test.js",
+      "name": "shout trims surrounding whitespace before upper-casing",
+      "outcome": "failure",
+      "message": "",
+      "text": "Error: expect(received).toBe(expected) // Object.is equality\n\n- Expected  - 1\n+ Received  + 2\n\n- HELLO WORLD\n+  \tHELLO WORLD\n+  \n    at Object.toBe (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/verify-clean/__tests__/shout.test.js:5:40)\n    at Promise.finally.completed (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/repo/node_modules/jest-circus/build/jestAdapterInit.js:1834:28)\n    at new Promise (<anonymous>)\n    at callAsyncCircusFn (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/repo/node_modules/jest-circus/build/jestAdapterInit.js:1774:10)\n    at _callCircusTest (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/repo/no"
+    },
+    {
+      "file": "__tests__/shout.test.js",
+      "classname": "__tests__/shout.test.js",
+      "name": "shout upper-cases inner text while preserving inner whitespace",
+      "outcome": "passed",
+      "message": "",
+      "text": ""
+    },
+    {
+      "file": "__tests__/wordCount.test.js",
+      "classname": "__tests__/wordCount.test.js",
+      "name": "wordCount counts words separated by mixed whitespace",
+      "outcome": "failure",
+      "message": "",
+      "text": "TypeError: wordCount is not a function\n    at Object.wordCount (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/verify-clean/__tests__/wordCount.test.js:5:12)\n    at Promise.finally.completed (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/repo/node_modules/jest-circus/build/jestAdapterInit.js:1834:28)\n    at new Promise (<anonymous>)\n    at callAsyncCircusFn (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/repo/node_modules/jest-circus/build/jestAdapterInit.js:1774:10)\n    at _callCircusTest (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/repo/node_modules/jest-circus/build/jestAdapterInit.js:1167:40)\n    at _runTestInContext"
+    },
+    {
+      "file": "__tests__/wordCount.test.js",
+      "classname": "__tests__/wordCount.test.js",
+      "name": "wordCount returns zero for empty and whitespace-only text",
+      "outcome": "failure",
+      "message": "",
+      "text": "TypeError: wordCount is not a function\n    at Object.wordCount (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/verify-clean/__tests__/wordCount.test.js:10:12)\n    at Promise.finally.completed (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/repo/node_modules/jest-circus/build/jestAdapterInit.js:1834:28)\n    at new Promise (<anonymous>)\n    at callAsyncCircusFn (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/repo/node_modules/jest-circus/build/jestAdapterInit.js:1774:10)\n    at _callCircusTest (/private/var/folders/xb/b3d66kcn3238wqpvt4f6lckc0000gn/T/gaffer-spike-job2-js.4iHlac0Hou/repo/node_modules/jest-circus/build/jestAdapterInit.js:1167:40)\n    at _runTestInContex"
+    },
+    {
+      "file": "__tests__/strings.test.js",
+      "classname": "__tests__/strings.test.js",
+      "name": " shout uppercases",
+      "outcome": "passed",
+      "message": "",
+      "text": ""
+    }
+  ],
+  "classification": [
+    {
+      "label": "acceptance",
+      "criterion": "C1",
+      "identity": "__tests__/wordCount.test.js::wordCount counts words separated by mixed whitespace",
+      "junit": "failure",
+      "cause": "TypeError",
+      "verdict": "VALID red: TypeError names expected_missing ['wordCount']"
+    },
+    {
+      "label": "acceptance",
+      "criterion": "C1",
+      "identity": "__tests__/wordCount.test.js::wordCount returns zero for empty and whitespace-only text",
+      "junit": "failure",
+      "cause": "TypeError",
+      "verdict": "VALID red: TypeError names expected_missing ['wordCount']"
+    },
+    {
+      "label": "acceptance",
+      "criterion": "C2",
+      "identity": "__tests__/shout.test.js::shout trims surrounding whitespace before upper-casing",
+      "junit": "failure",
+      "cause": "AssertionError",
+      "verdict": "VALID red: assertion"
+    },
+    {
+      "label": "guard",
+      "criterion": "C3",
+      "identity": "__tests__/shout.test.js::shout upper-cases inner text while preserving inner whitespace",
+      "junit": "passed",
+      "verdict": "guard ok (passes on base)"
+    }
+  ],
+  "identities": 4,
+  "identities_matched_in_junit": 4,
+  "unmatched": [],
+  "runner_tail": "O WORLD\n    +  \tHELLO WORLD\n    +\n\n      3 | describe('shout', () => {\n      4 |   test('trims surrounding whitespace before upper-casing', () => {\n    > 5 |     expect(shout(' \\tHello world\\n ')).toBe('HELLO WORLD');\n        |                                        ^\n      6 |     expect(shout(' \\t\\n ')).toBe('');\n      7 |   });\n      8 |\n\n      at Object.toBe (__tests__/shout.test.js:5:40)\n\nFAIL __tests__/wordCount.test.js\n  \u25cf wordCount \u203a counts words separated by mixed whitespace\n\n    TypeError: wordCount is not a function\n\n      3 | describe('wordCount', () => {\n      4 |   test('counts words separated by mixed whitespace', () => {\n    > 5 |     expect(wordCount(' \\talpha  beta\\tgamma\\ndelta\\r\\nepsilon ')).toBe(5);\n        |            ^\n      6 |     expect(wordCount('hello')).toBe(1);\n      7 |   });\n      8 |\n\n      at Object.wordCount (__tests__/wordCount.test.js:5:12)\n\n  \u25cf wordCount \u203a returns zero for empty and whitespace-only text\n\n    TypeError: wordCount is not a function\n\n       8 |\n       9 |   test('returns zero for empty and whitespace-only text', () => {\n    > 10 |     expect(wordCount('')).toBe(0);\n         |            ^\n      11 |     expect(wordCount(' \\t\\n\\r ')).toBe(0);\n      12 |   });\n      13 | });\n\n      at Object.wordCount (__tests__/wordCount.test.js:10:12)\n\nPASS __tests__/strings.test.js\n\nTest Suites: 2 failed, 1 passed, 3 total\nTests:       3 failed, 2 passed, 5 total\nSnapshots:   0 total\nTime:        0.25 s, estimated 1 s\nRan all test suites.\n"
+}

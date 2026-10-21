@@ -1,0 +1,16 @@
+claude 2.1.304 (Claude Code)
+codex-cli 0.160.0
+{
+  "loggedIn": true,
+  "authMethod": "claude.ai",
+  "apiProvider": "firstParty",
+  "analyticsDisabled": false,
+  "projectsDirectory": "~/.gaffer/claude/projects",
+  "configDirectory": "~/.gaffer/claude",
+  "email": "<redacted>",
+  "orgId": "<redacted>",
+  "orgName": "<redacted>",
+  "subscriptionType": "pro"
+}
+Logged in using ChatGPT
+R2 PASS
