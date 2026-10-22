@@ -2296,15 +2296,15 @@ Lane A: Store. Lane B: Children. Lane C: Workspace. Lane D: Reviews. **Execution
 ## Implementation Tasks
 Synthesized from this review's findings. Each task derives from a specific finding above. Run with Claude Code or Codex; checkbox as you ship.
 
-- [ ] **T1 (P1, human: ~3h / CC: ~1h)** Experiments: run billing-route Experiment 1 with Pro quota-per-job measurement
+- [x] **T1 (P1, human: ~3h / CC: ~1h)** Experiments: run billing-route Experiment 1 with Pro quota-per-job measurement
   - Surfaced by: Scope Challenge, R2 accepted scope; Step 0A Pro correction
   - Files: docs/experiments/billing.md
   - Verify: write-up shows CLI versions, login status, meter before/after and a next-day API billing re-read
-- [ ] **T2 (P1, human: ~3h / CC: ~30 min)** Experiments: capture a full CodeRabbit round as fixtures and confirm non-draft review
+- [x] **T2 (P1, human: ~3h / CC: ~30 min)** Experiments: capture a full CodeRabbit round as fixtures and confirm non-draft review
   - Surfaced by: R12 (admission rules from fixtures)
   - Files: tests/fixtures/coderabbit/
   - Verify: fixtures cover walkthrough edit, status edit, resolved thread, outdated comment and inline finding
-- [ ] **T3 (P1, human: ~2 days / CC: ~2h)** Spike: vertical spike proving R2/R3, R1/R14/R21, R20, R5/R22 and R9
+- [x] **T3 (P1, human: ~2 days / CC: ~2h)** Spike: vertical spike proving R2/R3, R1/R14/R21, R20, R5/R22 and R9
   - Surfaced by: Outside voice, R26
   - Files: spike/ (throwaway), docs/spike-results.md
   - Verify: each named proof recorded pass/fail; any fail reopens its ledger record
@@ -2324,7 +2324,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: R6, R7, R10, R12, R14, R15, R21
   - Files: src/gaffer/workspace.py, tests/test_workspace_paths.py, tests/test_workspace_commits.py, tests/test_security.py
   - Verify: `uv run pytest tests/test_workspace_*.py tests/test_security.py`
-- [ ] **T8 (P1, human: ~3 days / CC: ~2h)** reviews: JUnit adapters (pytest, Jest, Vitest, generic), red-first, required checks, CodeRabbit admission, rounds, packets, CI log tail
+- [ ] **T8 (P1, human: ~3 days / CC: ~2h)** reviews: JUnit adapters (pytest, Jest, Vitest, PHPUnit per R29, generic), red-first, required checks, CodeRabbit admission, rounds, packets, CI log tail
   - Surfaced by: R4, R5, R11, R12, R13, R22, R25
   - Files: src/gaffer/reviews.py, tests/test_junit.py, tests/test_redfirst.py, tests/test_required_checks.py, tests/test_coderabbit_admission.py, tests/test_rounds.py, tests/test_packet.py
   - Verify: `uv run pytest tests/test_junit.py tests/test_redfirst.py tests/test_required_checks.py tests/test_coderabbit_admission.py tests/test_rounds.py tests/test_packet.py`
