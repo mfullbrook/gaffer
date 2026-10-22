@@ -860,7 +860,7 @@ Mark's config dirs and login; user/project/local setting sources excluded; allow
 
 State: approved
 Actual answer: A) Dedicated config dirs (D7 answer, 2026-10-09)
-Accepted scope: Claude children run with CLAUDE_CONFIG_DIR=~/.gaffer/claude and Codex with CODEX_HOME=~/.gaffer/codex, each logged in once to the subscription; `gaffer sync-skills` copies the skills named in gaffer.toml `allowed_skills` into gaffer's dir and records content hashes per job; MCP servers only from `allowed_mcp` via `--mcp-config` + `--strict-mcp-config` (default empty); Linear MCP and claude.ai connector tools always disallowed; `--setting-sources user` so project/local are excluded; gaffer's settings.json carries R1 permissions and sandbox; managed settings inspected; any control Experiment 3 can't confirm means refuse to launch; report lists allowlisted MCP servers as outside the sandbox.
+Accepted scope: Claude children run with CLAUDE_CONFIG_DIR=~/.gaffer/claude and Codex with CODEX_HOME=~/.gaffer/codex, each logged in once to the subscription; `gaffer sync-skills` copies the skills named in gaffer.toml `allowed_skills` into gaffer's dir and records content hashes per job; MCP servers only from `allowed_mcp` via `--mcp-config` + `--strict-mcp-config` (default empty); Linear MCP and claude.ai connector tools always disallowed; `--setting-sources user` so project/local are excluded; gaffer's settings.json carries R1 permissions and sandbox; managed settings inspected; any control Experiment 3 can't confirm means refuse to launch; report lists allowlisted MCP servers as outside the sandbox. *Amended by R28: synced skills accepted and reported, plugins blocked, init-event check at launch; Codex sees `~/.agents` skills.*
 History: D6 (2026-10-09) offered A) Exclude personal config / B) Inspect and refuse. Actual answer (Other): "I think excluding Gaffers needs a whitelist of MCP sand skills. We cannot just remove everything as the skills make things more efficient. But the linear MCP is a definite item to be excluded. Claude code can be launched with a dedicated configuration directory - that could work". Not mappable to either option, so R3 was rebuilt around the allowlist and dedicated-directory direction after a probe of per-directory login.
 
 ### R4: Test-result contract and gaffer's own test runs
@@ -964,7 +964,7 @@ Any JUnit failure or error on the base counts as red; only passing tests trigger
 
 State: approved
 Actual answer: A) Acceptance/guard (D9 answer, 2026-10-09)
-Accepted scope: Tester output labels each test acceptance or guard and lists expected_missing symbols; on the base, an acceptance test is a valid red if JUnit reports a failure, or an error whose message names an expected_missing symbol; any other error is invalid (one retry with the error attached, then BLOCKED: tester_invalid); an acceptance test that passes on base is BLOCKED: already_passing, listing tests and criteria; guard tests may pass on base and must pass at the end; at least one acceptance test per testable criterion.
+Accepted scope: Tester output labels each test acceptance or guard and lists expected_missing symbols; on the base, an acceptance test is a valid red if JUnit reports a failure, or an error whose message names an expected_missing symbol; any other error is invalid (one retry with the error attached, then BLOCKED: tester_invalid); an acceptance test that passes on base is BLOCKED: already_passing, listing tests and criteria; guard tests may pass on base and must pass at the end; at least one acceptance test per testable criterion. *Amended by R28: classify on exception type, not JUnit failure alone.*
 History: none
 
 ### R6: Tester file-path confinement
@@ -1392,7 +1392,7 @@ Writer Bash network allowlist stays empty; gaffer runs per-repo install_command 
 
 State: approved
 Actual answer: A) Registry hosts allowlisted (D19 answer, 2026-10-09)
-Accepted scope: Writer Bash sandbox network.allowedDomains = per-ecosystem registry hosts from gaffer.toml (python: pypi.org, files.pythonhosted.org; node: registry.npmjs.org; php: repo.packagist.org, packagist.org) plus per-repo extra_hosts, no GitHub hosts; gaffer runs per-repo install_command in job and verification worktrees under a sandbox limited to the same hosts; gaffer's test runs stay network-off; writer may add dependencies, with manifest and lockfile changes needing the R7 trailer and a Codex judgement; Context7 via R3 allowed_mcp. Supersedes R1's "network allowlist empty" for the writer's Bash sandbox; all other R1 scope unchanged.
+Accepted scope: Writer Bash sandbox network.allowedDomains = per-ecosystem registry hosts from gaffer.toml (python: pypi.org, files.pythonhosted.org; node: registry.npmjs.org; php: repo.packagist.org, packagist.org) plus per-repo extra_hosts, no GitHub hosts; gaffer runs per-repo install_command in job and verification worktrees under a sandbox limited to the same hosts; gaffer's test runs stay network-off; writer may add dependencies, with manifest and lockfile changes needing the R7 trailer and a Codex judgement; Context7 via R3 allowed_mcp. Supersedes R1's "network allowlist empty" for the writer's Bash sandbox; all other R1 scope unchanged. *Amended by R28: install_command uses sandbox-runtime; PHP/Composer proof (Experiment 3b) pending; pip via uv.*
 History: none
 
 ### R15: Secret scanner
@@ -1664,7 +1664,7 @@ v0.1 keeps R1 as approved; credential-read denial for Codex children and test ru
 
 State: approved
 Actual answer: A) Apply: deny reads (D25 answer, 2026-10-11)
-Accepted scope: Deny reads of ~/.ssh, ~/.config/gh, ~/.aws, ~/Library/Keychains, the vault, ~/.claude and ~/.codex for Codex tester/reviewer children and for gaffer's test_command and install_command runs; mechanism proven in Experiment 3 (candidates: Codex read-permission config, a Seatbelt profile wrapping the Codex process, Anthropic sandbox-runtime); if none holds, Codex children and test runs refuse to launch; gaffer doctor (R18) probes these denials.
+Accepted scope: Deny reads of ~/.ssh, ~/.config/gh, ~/.aws, ~/Library/Keychains, the vault, ~/.claude and ~/.codex for Codex tester/reviewer children and for gaffer's test_command and install_command runs; mechanism proven in Experiment 3 (candidates: Codex read-permission config, a Seatbelt profile wrapping the Codex process, Anthropic sandbox-runtime); if none holds, Codex children and test runs refuse to launch; gaffer doctor (R18) probes these denials. *Amended by R28: deny list adds `~/.gaffer` and `~/.claude.json`; Codex permission profiles; installs via sandbox-runtime.*
 History: none
 
 ### R21: Where the writer's git metadata lives
@@ -1771,7 +1771,7 @@ v0.1 keeps R4 as approved; test identity inventory and runner adapters become a 
 
 State: approved
 Actual answer: A) Apply: inventory + adapters (D27 answer, 2026-10-13)
-Accepted scope: The tester's criterion map lists every expected test identity (file + JUnit classname/name); each must appear in JUnit results, missing = failed (R7); for red-first, a file-level collection error naming an expected_missing symbol makes that file's acceptance tests valid red; v0.1 ships fixture-tested JUnit adapters for pytest, Jest and Vitest; other runners only with `runner = "generic"`, where the report states xfail detection is unavailable. Supersedes R4's "tester tests are testcases in files the tester created".
+Accepted scope: The tester's criterion map lists every expected test identity (file + JUnit classname/name); each must appear in JUnit results, missing = failed (R7); for red-first, a file-level collection error naming an expected_missing symbol makes that file's acceptance tests valid red; v0.1 ships fixture-tested JUnit adapters for pytest, Jest and Vitest; other runners only with `runner = "generic"`, where the report states xfail detection is unavailable. Supersedes R4's "tester tests are testcases in files the tester created". *Amended by R28: pytest and Jest adapter flags and failure shapes.*
 History: none
 
 ### R23: Evidence that survives lost state
@@ -2081,7 +2081,7 @@ Actual answer: A) Add to TODOS.md (D33 answer, 2026-10-18)
 Accepted scope: Add a P1 item under ## Scheduler in TODOS.md: Approach B capacity scheduler daemon (quota-window model from measured usage, admission with tester/reviewer/repair reservations, overnight interval, daytime headroom), `agent-ready` pickup, launchd, Jasper/Telegram notifier, Linear write-back (deferred by D1), two-job limit; depends on the v0.1 demo (SC2-SC5) and Experiment 1 quota data. Effort XL.
 History: none
 
-Approval readiness: PASS. Checked: D1 (D1 answer), D2 (D2 answer), D3 (D3 answer), R1 (D4), R2 (D5), R3 (D7), R4 (D8), R5 (D9), R6 (D10), R7 (D11), R8 (D12), R9 (D13), R10 (D14), R11 (D15), R12 (D16), R13 (D18), R14 (D19), R15 (D20), R16 (D21), R17 (D22, subsumed by R25), R18 (D23), R19 (D24), R20 (D25), R21 (D26), R22 (D27), R24 (D29), R25 (D30), R26 (D31), T1 (D32), T2 (D33), R27 (Mark, 2026-10-20, after Experiment 2). Architecture #3 (argv-only, issue-key validation) carried by prior approval of the design Constraints. Unresolved: R23 (D28 = investigate first; no remedy approved).
+Approval readiness: PASS. Checked: D1 (D1 answer), D2 (D2 answer), D3 (D3 answer), R1 (D4), R2 (D5), R3 (D7), R4 (D8), R5 (D9), R6 (D10), R7 (D11), R8 (D12), R9 (D13), R10 (D14), R11 (D15), R12 (D16), R13 (D18), R14 (D19), R15 (D20), R16 (D21), R17 (D22, subsumed by R25), R18 (D23), R19 (D24), R20 (D25), R21 (D26), R22 (D27), R24 (D29), R25 (D30), R26 (D31), T1 (D32), T2 (D33), R27 (Mark, 2026-10-20, after Experiment 2), R28 (Mark, 2026-10-22, after Experiment 3). Architecture #3 (argv-only, issue-key validation) carried by prior approval of the design Constraints. Unresolved: R23 (D28 = investigate first; no remedy approved).
 
 ### R27: Experiment 2 corrections (CodeRabbit completion and admission)
 Finding: Experiment 2 (`docs/experiments/coderabbit.md`, commit 93eb5a3), section 8 proposals; T2 fixtures in `tests/fixtures/coderabbit/`.
@@ -2106,6 +2106,33 @@ State: approved
 Actual answer: fold all Experiment 2 section 8 proposals into the plan (Mark, 2026-10-20)
 Accepted scope: the "After (approved)" column above. Each row gets a fixture test against `tests/fixtures/coderabbit/` in T8.
 History: amends R12 (admission, PR body), R13 (log fetch) and the design's "Rounds and packets" and "CodeRabbit fallback"; answers Open Question 1.
+
+### R28: Experiment 3 corrections and decisions (spike)
+Finding: Experiment 3 (`docs/spike-results.md`, commit b98225b), "Differences from the ledger" items 1-11; Mark's review 2026-10-22.
+Plan baseline: R1, R3, R5, R9, R14, R20, R21, R22 accepted scopes as approved.
+Runtime evidence: all 25 spike proofs passed on Claude Code 2.1.304 and codex-cli 0.160.0, two of them only with controls the ledger didn't anticipate (skill lockdown, experimental Codex network proxy). The spike's install allowlist covered PyPI and npm only; PHP was not exercised.
+
+| Choice | Before | After (approved) |
+|---|---|---|
+| Claude skills and plugins (R3) | allowlisted skills only, via `--setting-sources user` | **account-synced skills are accepted** and listed in the job report, like Codex's `~/.agents` skills; **plugins are blocked** (`enabledPlugins: false`, built-in plugins included, since plugins can carry hooks); bundled skills off (`disableBundledSkills`); every child's init event is checked at launch: `plugins == []` and `mcp_servers ⊆ allowed_mcp`, else gaffer kills the child before it acts (Mark, 2026-10-22) |
+| Codex skills (R3) | `CODEX_HOME` carries the allowlist | `CODEX_HOME` does not isolate skills; Codex children **may see `~/.agents/skills`** (Mark: acceptable, be aware) and the report lists them; AGENTS.md off with `project_doc_max_bytes=0`; `multi_agent`, `apps`, `plugins`, `browser_use`, `computer_use`, `hooks`, `image_generation`, `in_app_browser`, `remote_plugin` and `goals` disabled (flag set in `docs/spike-results.md`) |
+| Deny list (R1, R20) | ~/.ssh, ~/.config/gh, ~/.aws, ~/Library/Keychains, vault, ~/.claude, ~/.codex | same **plus `~/.gaffer` and `~/.claude.json`**: both dedicated dirs hold subscription credentials as plain files |
+| Codex child and test-run sandbox (R1, R20) | `-s read-only` / `codex sandbox` | named Codex permission profiles with `deny` entries (the built-in modes read credentials); Seatbelt wrapping Codex refused (nesting) |
+| install_command network (R14, R20) | registry hosts via sandbox | **Anthropic sandbox-runtime** (standalone, the engine behind Claude's sandbox whose `allowedDomains` passed B4); new npm dependency approved by Mark 2026-10-22; Codex's experimental `network_proxy` rejected; doctor (R18) probes it |
+| PHP installs (R14) | packagist hosts listed, untested | must be proven before module code (Experiment 3b): Composer via Laravel Herd (`~/Library/Application Support/Herd/bin`) under the writer sandbox and sandbox-runtime; Composer normally fetches dists from `api.github.com`/`codeload.github.com`, which R14 blocks, so the proof decides whether archive-only GitHub hosts are needed. Any change to R14's "no GitHub hosts" comes back to Mark |
+| pip under the writer sandbox (R14) | pip | `uv` (pip's default truststore fails TLS in the sandbox; `--use-deprecated=legacy-certs` as fallback) |
+| Red-first classification (R5) | JUnit failure = valid red | classify on exception type: an assertion failure is valid; any other exception (`NameError`, `ReferenceError`, `TypeError`, …) is valid only if its text names an `expected_missing` symbol |
+| pytest adapter (R22) | JUnit | run with `--continue-on-collection-errors`; map `classname` to file (xunit2 has no `file`); a collection error is one testcase with classname `""` named by module path |
+| Jest adapter (R22) | JUnit | run with `--no-watchman` (watchman fails in the sandbox and Jest exits 0 with no tests); an empty or missing JUnit file is a failure; jest-junit suite failure = two testcases with classname `Test suite failed to run`. Vitest still untested |
+| Commit identity (R21) | unspecified | gaffer writes `user.name`/`user.email` into the job clone's config (the writer can't use `git -c`) |
+| Resume (R9) | resume by ID | every resume runs from the job clone path (sessions are keyed by cwd) |
+| Version drift (R18) | doctor on version change | confirmed needed: Claude Code moved 2.1.295 → 2.1.302 → 2.1.304 in four days |
+| Still unproven | n/a | Codex `web_search="disabled"` (runs on OpenAI's side; doctor must probe it); writer model pinned explicitly in config (`--model`) |
+
+State: approved
+Actual answer: Claude skills = accept synced skills, block plugins; installs = sandbox-runtime; Codex `~/.agents` skills acceptable; PHP must be proven (Mark, 2026-10-22). All other rows fold in the spike's findings as recorded.
+Accepted scope: the "After (approved)" column above.
+History: amends R1, R3, R5, R9, R14, R18, R20, R21 and R22; adds Experiment 3b to the build order.
 
 ## v0.1 plan as amended by eng review
 
@@ -2175,7 +2202,8 @@ READY (0) · BLOCKED (2) · CLOSED (3) → report.md; reruns: --adopt-head, --mo
 
 1. ~~Experiment 1~~ **Done** (`docs/experiments/billing.md`; billing pages re-read and overage confirmed off by Mark, 2026-10-20): billing route. Record CLI versions and login-status output, and re-read the API billing pages the next day (R2). Also measure how much of a Pro 5-hour window one tester + writer + reviewer job uses (Step 0A).
 2. ~~Experiment 2~~ **Done** (`docs/experiments/coderabbit.md`, fixtures in `tests/fixtures/coderabbit/`, corrections in R27): CodeRabbit fixtures. Confirm that CodeRabbit reviews ready-for-review PRs and derive the admission rules (R12).
-3. Experiment 3: the vertical spike on two toy repos, one pytest and one Jest, written up in `docs/spike-results.md`. It must prove R2/R3 logins in gaffer's config dirs, R1/R14/R21 sandboxed commits in a job clone, R20 read denial for Codex children and test runs, R5/R22 red-first via JUnit, and R9 resume by pre-assigned ID. Any failure reopens its decision before module code starts.
+3. ~~Experiment 3~~ **Done** (`docs/spike-results.md`, corrections in R28): the vertical spike on two toy repos, one pytest and one Jest, written up in `docs/spike-results.md`. It must prove R2/R3 logins in gaffer's config dirs, R1/R14/R21 sandboxed commits in a job clone, R20 read denial for Codex children and test runs, R5/R22 red-first via JUnit, and R9 resume by pre-assigned ID. Any failure reopens its decision before module code starts.
+3b. Experiment 3b (R28): prove PHP installs (Composer via Herd) under the writer sandbox and under sandbox-runtime for install_command, and settle which hosts Composer needs.
 4. Build `config.py`, then `store.py`, `children.py`, `workspace.py` and `reviews.py` in parallel, then `runner.py`.
 5. After the spike passes: doctor (R18), eval (R19) and lost-state reconstruction (R9; R23 still under investigation).
 6. Toy-repo demo (SC2), then one real RobinHQ ticket.
