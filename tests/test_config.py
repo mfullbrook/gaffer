@@ -576,3 +576,22 @@ def test_mac_keychain_timeout_names_the_fix():
 
     with pytest.raises(KeychainError, match="Fix: unlock the login Keychain"):
         config.MacKeychain(run).find_generic_password("gaffer", "github-token")
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [("operator_login", '"mfullbrook\\n"'), ("allowed_skills", '["code-loop\\n"]'), ("writer_model", '"opus\\n"')],
+)
+def test_trailing_newline_rejected_in_globals(home, key, value):
+    globals_ = f'operator_login = "mfullbrook"\nvault_path = "~/vault"\n'
+    globals_ = "\n".join(l for l in globals_.splitlines() if not l.startswith(key)) + f"\n{key} = {value}\n"
+    assert key in issues(home, globals_=globals_)
+
+
+@pytest.mark.parametrize(("key", "value"), [("github", '"mfullbrook/app\\n"')])
+def test_trailing_newline_rejected_in_repo(home, key, value):
+    assert f"repos.ENG.{key}" in issues(home, repo(**{key: value}))
+
+
+def test_trailing_newline_rejected_in_team_key(home):
+    assert any("ENG\n" in f for f in issues(home, '[repos."ENG\\n"]\npath = "~/src/app"\n'))

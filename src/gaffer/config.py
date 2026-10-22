@@ -242,7 +242,7 @@ def load_config(path: Path | None = None, *, home: Path | None = None) -> Config
     issues: list[ConfigIssue] = []
     top = _Table(data, "", issues)
     operator_login = top.string("operator_login", fix='set operator_login = "<your GitHub login>" (R27).')
-    if operator_login is not None and not _GITHUB_LOGIN.match(operator_login):
+    if operator_login is not None and not _GITHUB_LOGIN.fullmatch(operator_login):
         top.error("operator_login", f"{operator_login!r} is not a GitHub login.", "use the login gaffer's token posts as, without @.")
     allowed_skills = top.names("allowed_skills")
     allowed_mcp = top.names("allowed_mcp")
@@ -255,10 +255,10 @@ def load_config(path: Path | None = None, *, home: Path | None = None) -> Config
         top.error("(file)", f"gaffer.toml is inside the vault ({vault_path}).", f"move it outside the vault, e.g. {default_config_path(home)}.")
     job_root = _job_root(top, home, vault_path)
     writer_model = top.string("writer_model", required=False, fix='set writer_model to a Claude model alias or ID, e.g. "opus" (R30).')
-    if writer_model is not None and not _NAME.match(writer_model):
+    if writer_model is not None and not _NAME.fullmatch(writer_model):
         top.error("writer_model", f"{writer_model!r} is not a model name.", 'use an alias like "opus" or a full model ID (R30).')
     codex_model = top.string("codex_model", required=False, fix='set codex_model to a Codex model name, or remove it to use the CLI default (R30).')
-    if codex_model is not None and not _NAME.match(codex_model):
+    if codex_model is not None and not _NAME.fullmatch(codex_model):
         top.error("codex_model", f"{codex_model!r} is not a model name.", "use a Codex model name, or remove it (R30).")
 
     repos: dict[str, RepoConfig] = {}
@@ -269,7 +269,7 @@ def load_config(path: Path | None = None, *, home: Path | None = None) -> Config
         top.error("repos", "must be a table with at least one repo.", "add a [repos.<TEAM>] table, e.g. [repos.ENG].")
     else:
         for team_key, raw in raw_repos.items():
-            if not _TEAM_KEY.match(team_key):
+            if not _TEAM_KEY.fullmatch(team_key):
                 top.error(f"repos.{team_key}", "is not a Linear team key.", "use the issue-key prefix in capitals, e.g. ENG for ENG-123.")
                 continue
             if not isinstance(raw, dict):
@@ -306,7 +306,7 @@ def _parse_repo(team_key: str, raw: dict[str, Any], home: Path, issues: list[Con
         t.error("path", f"{path} is not a git checkout.", "point path at the repository root (the directory holding .git).")
 
     github = t.string("github", fix='set github = "<owner>/<repo>".')
-    if github is not None and not _GITHUB_REPO.match(github):
+    if github is not None and not _GITHUB_REPO.fullmatch(github):
         t.error("github", f"{github!r} is not owner/repo.", 'write it as "owner/repo", without a URL.')
 
     base = t.string("base", fix='set base = "<base branch>", e.g. "main".')
@@ -468,7 +468,7 @@ class _Table:
     def names(self, key: str) -> tuple[str, ...]:
         values = self.str_list(key, default=(), fix=f'set {key} = ["name", ...] (R3).') or ()
         for v in values:
-            if not _NAME.match(v):
+            if not _NAME.fullmatch(v):
                 self.error(key, f"{v!r} is not a valid name.", "use letters, digits, '_', '.', ':' and '-' only.")
         return values
 
@@ -531,7 +531,7 @@ def _hosts(t: _Table, key: str) -> tuple[str, ...]:
     for raw in values:
         host = raw.strip().lower().rstrip(".")
         bare = host.removeprefix("*.")
-        if not _HOST.match(host):
+        if not _HOST.fullmatch(host):
             t.error(key, f"{raw!r} is not a hostname.", 'list bare hostnames, e.g. "registry.example.com", with no scheme, port or path.')
         elif host in NEVER_ALLOWED_HOSTS:
             t.error(key, f"{raw!r} is never allowed (R14, R29).", f"remove {raw!r}; gaffer pushes and fetches from GitHub itself.")
