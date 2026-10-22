@@ -20,6 +20,9 @@ Admission (stateless; the round subtracts already-processed keys):
 - Codex review findings (R31): every finding of the Codex review recorded for
   the current head is an item with source "codex", its id prefixed with the
   head SHA; a review recorded for any other head is ignored.
+- Codex "unjustified" harness judgements (R32, amending R7): each is an item
+  with source "codex" too, so the writer reverts or justifies the change in the
+  next resume (a repair cycle). "justified" judgements stay report-only.
 Items are keyed by (source, item id, content hash); the hash is over the body
 with NORMALIZE_PATTERN lines removed.
 """
@@ -70,6 +73,7 @@ class ItemKind(StrEnum):
     REVIEW_COMMENT = "review_comment"
     REVIEW_BODY = "review_body"
     CODEX_FINDING = "codex_finding"
+    HARNESS_JUDGEMENT = "harness_judgement"  # R32: a Codex "unjustified" verdict on a tester/harness change
 
 
 # --- normalization and identity -------------------------------------------------
@@ -401,10 +405,13 @@ CODEX_AUTHOR = "codex"
 class CodexReview:
     """The Codex review recorded for one head (once per head, design "Codex
     reviewer"). findings are children.ReviewFinding objects or mappings with
-    id, severity, path, line, title and body."""
+    id, severity, path, line, title and body; harness_judgements are
+    children.HarnessJudgement objects or mappings with path, verdict and reason
+    (R7, R32)."""
 
     head_sha: str
     findings: tuple[Any, ...] = ()
+    harness_judgements: tuple[Any, ...] = ()
 
 
 def _field(f: Any, name: str) -> Any:
@@ -416,7 +423,17 @@ def codex_item_id(head_sha: str, finding_id: str) -> str:
     return f"{head_sha}/{finding_id}"
 
 
+def harness_item_id(head_sha: str, path: str) -> str:
+    """One item per judged path per head (R32)."""
+    return f"{head_sha}/harness/{path}"
+
+
+UNJUSTIFIED = "unjustified"
+
+
 def codex_items(review: CodexReview) -> tuple[FeedbackItem, ...]:
+    """Packet items from a Codex review: every finding (R31) and every
+    "unjustified" harness judgement (R32)."""
     out: dict[tuple[str, str, str], FeedbackItem] = {}
     for f in review.findings:
         fid = str(_field(f, "id") or "").strip()
@@ -439,6 +456,27 @@ def codex_items(review: CodexReview) -> tuple[FeedbackItem, ...]:
             path=path if isinstance(path, str) and path else None,
             line_start=line,
             line_end=line,
+        )
+        out.setdefault(item.key, item)
+    for j in review.harness_judgements:
+        if str(_field(j, "verdict") or "") != UNJUSTIFIED:
+            continue
+        path = str(_field(j, "path") or "").strip()
+        if not path:
+            raise ValueError("a Codex harness judgement has no path")
+        reason = str(_field(j, "reason") or "").strip() or "(no reason given)"
+        text = (f"[unjustified harness change] {path}\n\n"
+                f"The Codex reviewer judged your change to this tester, harness or CI file unjustified (R7): {reason}\n\n"
+                f"Revert the change in a new commit (disposition fixed), or decline this item with the reason the "
+                f"change is needed.")
+        item = FeedbackItem(
+            source=Source.CODEX,
+            item_id=harness_item_id(review.head_sha, path),
+            content_hash=content_hash(text),
+            kind=ItemKind.HARNESS_JUDGEMENT,
+            author=CODEX_AUTHOR,
+            body=normalize_body(text),
+            path=path,
         )
         out.setdefault(item.key, item)
     return tuple(out.values())

@@ -182,7 +182,10 @@ def test_already_passing_wins_over_invalid():
     assert classify_red_first(cmap, parse_junit("pytest", xml)).status is RedFirstStatus.ALREADY_PASSING
 
 
-def test_guard_may_fail_on_base_by_assertion_but_not_by_a_typo():
+def test_a_guard_failing_on_base_is_invalid_with_the_failure_in_the_retry_feedback():
+    """R32: a guard proves existing behaviour works, so it must pass on base. Failing by
+    assertion is invalid (one retry with the failure attached, then tester_invalid), and
+    so is a typo."""
     xml = (
         b'<testsuites><testsuite><testcase classname="t" name="g1"><failure>E   assert 1 == 2\n\nt.py:3: AssertionError</failure></testcase>'
         b'<testcase classname="t" name="g2"><failure>E   NameError: name \'shuot\' is not defined\n\nt.py:5: NameError</failure></testcase>'
@@ -199,6 +202,34 @@ def test_guard_may_fail_on_base_by_assertion_but_not_by_a_typo():
     r = classify_red_first(cmap, parse_junit("pytest", xml))
     assert [v.verdict for v in r.verdicts] == [Verdict.GUARD_FAILS, Verdict.INVALID, Verdict.VALID_ASSERTION]
     assert r.status is RedFirstStatus.INVALID
+    assert [v.test.name for v in r.invalid] == ["g1", "g2"]
+    feedback = r.retry_feedback()
+    assert "t.py::t::g1 (guard, C1): a guard test must pass on base" in feedback and "assert 1 == 2" in feedback
+
+
+def test_a_guard_alone_failing_on_base_makes_an_otherwise_valid_red_invalid():
+    """R32 replaces T8's non-blocking guard_fails_on_base: the only problem is the guard."""
+    xml = (
+        b'<testsuites><testsuite><testcase classname="t" name="g1"><failure>E   assert 1 == 2\n\nt.py:3: AssertionError</failure></testcase>'
+        b'<testcase classname="t" name="a"><failure>E   assert 0 == 1\n\nt.py:7: AssertionError</failure></testcase>'
+        b"</testsuite></testsuites>"
+    )
+    cmap = CriterionMap((ExpectedTest("C1", Label.GUARD, "t.py", "t", "g1"), ExpectedTest("C1", Label.ACCEPTANCE, "t.py", "t", "a")),
+                        testable_criteria=("C1",))
+    r = classify_red_first(cmap, parse_junit("pytest", xml))
+    assert r.status is RedFirstStatus.INVALID and r.problems == ()
+    assert [v.verdict for v in r.invalid] == [Verdict.GUARD_FAILS]
+
+
+def test_a_guard_on_a_preserves_criterion_failing_on_base_is_invalid():
+    """R32 settles R31 report item 2: the "existing" behaviour must exist today."""
+    xml = (b'<testsuites><testsuite><testcase classname="t" name="g1"><failure>E   assert 1 == 2\n\nt.py:3: AssertionError</failure>'
+           b"</testcase></testsuite></testsuites>")
+    cmap = CriterionMap((ExpectedTest("C1", Label.GUARD, "t.py", "t", "g1"),), testable_criteria=("C1",),
+                        preserving_criteria=("C1",))
+    r = classify_red_first(cmap, parse_junit("pytest", xml))
+    assert r.status is RedFirstStatus.INVALID and r.problems == ()
+    assert [v.verdict for v in r.verdicts] == [Verdict.GUARD_FAILS]
 
 
 def test_identity_missing_from_junit_without_a_file_level_error_is_invalid():

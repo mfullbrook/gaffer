@@ -9,7 +9,11 @@ On the base an acceptance test is a valid red when:
   file-level error names an expected_missing symbol (R22).
 Anything else is invalid: one retry with the errors attached, then BLOCKED:
 tester_invalid. An acceptance test passing on base is BLOCKED: already_passing.
-Guard tests may pass on base.
+
+Guard tests must pass on base (R32): a guard proves that existing behaviour
+works, so a guard failing on base (by assertion, by naming an expected_missing
+symbol, or at collection) is invalid like any other bad red: one retry with the
+failure attached, then BLOCKED: tester_invalid.
 
 Coverage (R5 as amended by R31): every testable criterion needs at least one
 acceptance test, except a criterion the tester marked `preserves`
@@ -33,11 +37,13 @@ class Verdict(StrEnum):
     VALID_COLLECTION_ERROR = "valid_collection_error"
     ALREADY_PASSING = "already_passing"
     GUARD_PASSES = "guard_passes"
-    GUARD_FAILS = "guard_fails_on_base"
+    GUARD_FAILS = "guard_fails_on_base"  # invalid (R32): a guard must pass on base
     INVALID = "invalid"
 
 
 VALID_RED = frozenset({Verdict.VALID_ASSERTION, Verdict.VALID_MISSING_SYMBOL, Verdict.VALID_COLLECTION_ERROR})
+# Verdicts that make the tester's output invalid: one retry, then BLOCKED: tester_invalid.
+INVALID_VERDICTS = frozenset({Verdict.INVALID, Verdict.GUARD_FAILS})
 
 
 class RedFirstStatus(StrEnum):
@@ -65,7 +71,8 @@ class RedFirstResult:
 
     @property
     def invalid(self) -> tuple[TestVerdict, ...]:
-        return tuple(v for v in self.verdicts if v.verdict is Verdict.INVALID)
+        """Bad reds and guards failing on base (R32)."""
+        return tuple(v for v in self.verdicts if v.verdict in INVALID_VERDICTS)
 
     @property
     def already_passing(self) -> tuple[TestVerdict, ...]:
@@ -75,7 +82,10 @@ class RedFirstResult:
         """The errors attached to the tester's one retry (R5)."""
         lines = [f"- {p}" for p in self.problems]
         for v in self.invalid:
-            lines.append(f"- {v.test.identity} ({v.test.label.value}, {v.test.criterion_id}): {v.reason}")
+            why = v.reason
+            if v.verdict is Verdict.GUARD_FAILS:
+                why = f"a guard test must pass on base, because it proves existing behaviour works (R32); it failed: {why}"
+            lines.append(f"- {v.test.identity} ({v.test.label.value}, {v.test.criterion_id}): {why}")
         return "\n".join(lines)
 
 
@@ -113,7 +123,7 @@ def classify_red_first(cmap: CriterionMap, base: RunResult) -> RedFirstResult:
 
     if any(v.verdict is Verdict.ALREADY_PASSING for v in verdicts):
         status = RedFirstStatus.ALREADY_PASSING
-    elif problems or any(v.verdict is Verdict.INVALID for v in verdicts):
+    elif problems or any(v.verdict in INVALID_VERDICTS for v in verdicts):
         status = RedFirstStatus.INVALID
     else:
         status = RedFirstStatus.OK

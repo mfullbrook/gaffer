@@ -90,6 +90,14 @@ BLOCKED_REASONS = frozenset({
     "usage_limit",  # design Limits
     "state_lost",  # R9
     "stopped",  # T1 (P2)
+    "isolation_failed",  # R28, R31: init check failed again after the one relaunch
+    "install_failed",  # install_command failed in the job clone or a verification worktree (T9)
+    # workspace's own codes (T7 report item 2)
+    "writer_branch_moved",
+    "writer_history_rewritten",
+    "workspace_tampered",
+    "secret_scan_failed",
+    "foreign_pr",
 })
 
 CHILD_ROLES = frozenset({"tester", "writer", "reviewer", "test_run", "install"})
@@ -254,9 +262,10 @@ class Job:
 
     @property
     def ref(self) -> str:
-        """Stable job reference for markers (`gaffer-job: <ref>`, `gaffer-round: <ref>/...`).
-        Not the SQLite rowid, which a lost state.db would reuse."""
-        return self.issue_key if self.generation == 1 else f"{self.issue_key}-{self.generation}"
+        """Stable job reference for markers (`gaffer-job: <ref>`, `gaffer-round: <ref>/...`):
+        the issue key plus the --fresh generation, `ENG-12` or `ENG-12.2` (R31). Not the
+        SQLite rowid, which a lost state.db would reuse."""
+        return self.issue_key if self.generation == 1 else f"{self.issue_key}.{self.generation}"
 
     @property
     def cycle_limit(self) -> int:

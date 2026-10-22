@@ -1,13 +1,14 @@
 """R31: Codex review findings are packet items, and failing-test, failed-check and
-Codex item ids carry the head SHA (T6 report item 2). No network: fakes only."""
+Codex item ids carry the head SHA (T6 report item 2). R32: a Codex "unjustified"
+harness judgement is a packet item too. No network: fakes only."""
 
 import json
 
 import pytest
 
-from gaffer.children import ReviewFinding
+from gaffer.children import HarnessJudgement, ReviewFinding
 from gaffer.reviews.checks import CheckEvidence, log_tail
-from gaffer.reviews.coderabbit import CodexReview, FeedbackItem, ItemKind, Source, admit, codex_items
+from gaffer.reviews.coderabbit import CodexReview, FeedbackItem, ItemKind, Source, admit, codex_items, harness_item_id
 from gaffer.reviews.junit import CriterionMap, match_inventory, parse_junit
 from gaffer.reviews.packet import PACKET_CAP_BYTES, SecretDetected, build_packet, failed_check_key, failing_test_key
 from gaffer.reviews.rounds import Round, RoundStatus, SETTLE_SECONDS, poll_round
@@ -97,6 +98,39 @@ def test_poll_round_admits_codex_findings_into_the_round_packet():
     # Once processed, the finding is no longer pending.
     _, again = poll_round(Round.open(HEAD, clock=clock, round_timeout=TIMEOUT), gh, **{**kw, "processed_keys": out.packet_keys})
     assert codex_key not in again.pending_keys
+
+
+# --- Codex "unjustified" harness judgements (R32) ------------------------------------------------
+
+
+def test_an_unjustified_harness_judgement_is_a_codex_item_and_a_justified_one_is_not():
+    review = CodexReview(H1, (finding(1),), (
+        HarnessJudgement("tests/conftest.py", "unjustified", "It skips the acceptance test."),
+        HarnessJudgement("pyproject.toml", "justified", "New dev dependency for the feature."),
+    ))
+    a = admit(head_sha=H1, operator_login="mfullbrook", codex_reviews=[review])
+    assert [i.item_id for i in a.admitted] == [f"{H1}/F1", harness_item_id(H1, "tests/conftest.py")]
+    j = a.admitted[1]
+    assert j.source is Source.CODEX and j.kind is ItemKind.HARNESS_JUDGEMENT and j.author == "codex"
+    assert j.key[0] == "codex" and j.path == "tests/conftest.py" and j.line_start is None
+    assert j.body.startswith("[unjustified harness change] tests/conftest.py")
+    assert "It skips the acceptance test." in j.body and "Revert the change" in j.body
+    assert "pyproject.toml" not in " ".join(i.item_id for i in a.admitted)
+
+
+def test_harness_judgements_may_be_mappings_and_carry_the_head():
+    j = {"path": "tests/conftest.py", "verdict": "unjustified", "reason": "skips"}
+    [a] = codex_items(CodexReview(H1, (), (j, dict(j))))
+    [b] = codex_items(CodexReview(H2, (), (j,)))
+    assert a.content_hash == b.content_hash and a.key != b.key
+    assert a.item_id == f"{H1}/harness/tests/conftest.py"
+
+
+def test_a_harness_judgement_enters_the_packet_ahead_of_checks():
+    items = codex_items(CodexReview(H1, (), ({"path": "jest.config.js", "verdict": "unjustified", "reason": "x"},)))
+    p = build_packet(head_sha=H1, seq=1, scanner=FakeScanner(), items=[cr_item(1), *items], failed_checks=[failed_check()])
+    assert [k[0] for k in p.included_keys] == ["coderabbit", "codex", "check"]
+    assert f"### codex harness_judgement {H1}/harness/jest.config.js jest.config.js (by codex)" in p.text
 
 
 # --- head SHA in failing-test and failed-check ids ------------------------------------------------

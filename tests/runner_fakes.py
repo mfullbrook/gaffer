@@ -45,7 +45,7 @@ GOOD_SOURCE = "def add(a, b):\n    return a + b\n\n\ndef feature():\n    return 
 BAD_SOURCE = "def add(a, b):\n    return a + b\n\n\ndef feature():\n    return 41\n"
 
 TESTER_OUTPUT = {
-    "criteria": [{"id": "C1", "text": "feature() returns 42"}],
+    "criteria": [{"id": "C1", "text": "feature() returns 42", "preserves": False}],
     "untestable": [],
     "tests": [{"criterion_id": "C1", "label": "acceptance", "file": "tests/test_feature.py",
                "classname": "tests.test_feature", "name": "test_feature"}],
@@ -159,7 +159,7 @@ class WriterCall:
     session_id: str
     prompt: str
     item_ids: list[str] | None
-    plugin_keys: list[str]
+    plugin_keys: list[str]  # what children would block: the persistent block list (R31)
     clone: Path
 
 
@@ -212,6 +212,7 @@ class FakeChildren:
         self.reviews: list[Any] = []  # each: dict result or "error"
         self.calls: list[WriterCall] = []
         self.tester_calls = 0
+        self.tester_prompts: list[str] = []
         self.reviewer_calls = 0
         self.test_runs: list[Path] = []
         self.installs: list[Path] = []
@@ -238,6 +239,7 @@ class FakeChildren:
     # Codex
     def run_tester(self, jobs, prompt, *, on_spawn):
         self.tester_calls += 1
+        self.tester_prompts.append(prompt)
         lease = _lease("tester", self._pid(), None, jobs.clone)
         on_spawn(lease)
         out = self.tester_outputs.pop(0) if self.tester_outputs else TESTER_OUTPUT
@@ -263,9 +265,11 @@ class FakeChildren:
         return ch.ReviewRun(codex_run("reviewer", lease, out), ch.parse_review_result(out), None)
 
     # writer
-    def _writer(self, kind, repo, jobs, prompt, session_id, item_ids, on_spawn, plugin_keys):
+    def _writer(self, kind, repo, jobs, prompt, session_id, item_ids, on_spawn):
         lease = _lease("writer", self._pid(), session_id, jobs.clone)
-        call = WriterCall(kind, session_id, prompt, list(item_ids) if item_ids is not None else None, list(plugin_keys), jobs.clone)
+        # Like children.launch_writer/resume_writer: the learned keys always go into enabledPlugins:false (R31).
+        blocked = list(ch.load_blocked_plugins(ch.Paths.for_home(self.world.home).blocked_plugins))
+        call = WriterCall(kind, session_id, prompt, list(item_ids) if item_ids is not None else None, blocked, jobs.clone)
         self.calls.append(call)
         on_spawn(lease)
         if self.init_failures:  # each entry kills one launch at its init event (R28)
@@ -280,11 +284,11 @@ class FakeChildren:
             return out
         return writer_run(session_id, lease, out, item_ids=item_ids)
 
-    def launch_writer(self, repo, jobs, prompt, *, session_id, item_ids, on_spawn, plugin_keys):
-        return self._writer("launch", repo, jobs, prompt, session_id, item_ids, on_spawn, plugin_keys)
+    def launch_writer(self, repo, jobs, prompt, *, session_id, item_ids, on_spawn):
+        return self._writer("launch", repo, jobs, prompt, session_id, item_ids, on_spawn)
 
-    def resume_writer(self, repo, jobs, session_id, prompt, *, item_ids, on_spawn, plugin_keys):
-        return self._writer("resume", repo, jobs, prompt, session_id, item_ids, on_spawn, plugin_keys)
+    def resume_writer(self, repo, jobs, session_id, prompt, *, item_ids, on_spawn):
+        return self._writer("resume", repo, jobs, prompt, session_id, item_ids, on_spawn)
 
     # gaffer's own runs
     def run_test_command(self, repo, jobs, cwd, *, command, on_spawn):

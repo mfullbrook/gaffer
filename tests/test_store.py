@@ -234,7 +234,7 @@ def test_one_live_job_per_issue_and_fresh_generations(s):
     s.set_state(job.id, "CLOSED")
     s.archive_job(job.id)
     fresh = s.create_job("ENG-1", team_key="ENG", repo="mfullbrook/app")
-    assert (fresh.generation, fresh.branch, fresh.ref) == (2, "gaffer/ENG-1-2", "ENG-1-2")
+    assert (fresh.generation, fresh.branch, fresh.ref) == (2, "gaffer/ENG-1-2", "ENG-1.2")  # R31 marker form
     assert s.job_for_issue("ENG-1").id == fresh.id
     assert [j.generation for j in s.jobs_for_issue("ENG-1")] == [1, 2]
     with pytest.raises(Conflict):
@@ -770,7 +770,7 @@ def test_lost_db_with_existing_branch_and_pr_is_state_lost(db, clock):
 def test_state_lost_picks_the_newest_generation(s):
     lost = s.check_state_lost("ENG-1", [RemoteBranch("gaffer/ENG-1", 3), RemoteBranch("gaffer/ENG-1-2", 9)])
     job = s.record_state_lost(lost, team_key="ENG", repo="o/r")
-    assert (job.generation, job.branch, job.pr_number, job.ref) == (2, "gaffer/ENG-1-2", 9, "ENG-1-2")
+    assert (job.generation, job.branch, job.pr_number, job.ref) == (2, "gaffer/ENG-1-2", 9, "ENG-1.2")
 
 
 def test_reconstruct_needs_state_lost(s):

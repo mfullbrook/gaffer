@@ -125,6 +125,14 @@ def _tester_wrong_red(w: World):
     w.children.tester_outputs = [bad, bad]
 
 
+def _guard_fails_on_base(w: World):
+    """R32: C1 marked preserves, covered by a guard that fails on the base (twice)."""
+    bad = json.loads(json.dumps(TESTER_OUTPUT))
+    bad["criteria"][0]["preserves"] = True
+    bad["tests"][0]["label"] = "guard"
+    w.children.tester_outputs = [bad, bad]
+
+
 def _already_passing(w: World):
     w.mark_pushes({"src/app/__init__.py": GOOD_SOURCE}, branch="main", message="feature already there")
 
@@ -272,6 +280,7 @@ BLOCKED_CASES = [
     ("tester_failed", _tester_errors, "TESTER"),
     ("tester_invalid", _tester_bad_path, "TESTER"),
     ("tester_invalid", _tester_wrong_red, "RED_FIRST"),
+    ("tester_invalid", _guard_fails_on_base, "RED_FIRST"),
     ("already_passing", _already_passing, "RED_FIRST"),
     ("no_testable_criteria", _untestable, "TESTER"),
     ("writer_no_result", _writer_no_result, "WRITER"),
@@ -353,6 +362,53 @@ def test_tester_retry_carries_the_error_then_succeeds(world):
     assert branch_log(world).count("ENG-1: tester tests") == 1
 
 
+def test_a_guard_failing_on_base_retries_the_tester_with_the_failure_then_blocks(world):
+    """R32: a guard must prove existing behaviour works. Failing on base, it is invalid:
+    one retry with the failure attached, then BLOCKED: tester_invalid. Nothing is kept."""
+    _guard_fails_on_base(world)
+    code, out = world.run()
+    job = world.job()
+    assert (code, job.blocked_reason, job.blocked_step) == (rn.EXIT_BLOCKED, "tester_invalid", "RED_FIRST")
+    assert world.children.tester_calls == 2
+    first, retry = world.children.tester_prompts
+    assert "(first attempt)" in first
+    assert "a guard test must pass on base" in retry and "tests.test_feature" in retry and "ImportError" in retry
+    assert job.tester_commit_sha is None and not world.children.calls  # no writer ever started
+    assert "a guard test must pass on base" in job.blocked_message
+
+
+def test_a_guard_failing_on_base_then_a_valid_retry_is_ready(world):
+    bad = json.loads(json.dumps(TESTER_OUTPUT))
+    bad["criteria"][0]["preserves"] = True
+    bad["tests"][0]["label"] = "guard"
+    world.children.tester_outputs = [bad, TESTER_OUTPUT]
+    code, out = world.run()
+    assert code == rn.EXIT_READY, out
+    assert world.children.tester_calls == 2
+    assert branch_log(world).count("ENG-1: tester tests") == 1
+
+
+def test_preserves_is_carried_into_red_first_the_criterion_map_and_the_prompts(world):
+    """R31: a keep-working criterion covered by a guard only (passing on base) is valid."""
+    out = json.loads(json.dumps(TESTER_OUTPUT))
+    out["criteria"].append({"id": "C2", "text": "add() keeps working", "preserves": True})
+    out["tests"].append({"criterion_id": "C2", "label": "guard", "file": "tests/test_app.py",
+                         "classname": "tests.test_app", "name": "test_add"})
+    world.children.tester_outputs = [out]
+    code, text = world.run()
+    assert code == rn.EXIT_READY, text
+    job = world.job()
+    assert [(c["id"], c["preserves"]) for c in job.criterion_map["criteria"]] == [("C1", False), ("C2", True)]
+    red = world.events("red_first")[-1].detail
+    assert red["status"] == "ok"
+    assert {v["test"]: v["verdict"] for v in red["verdicts"]}["tests/test_app.py::tests.test_app::test_add"] == "guard_passes"
+    implement = world.children.calls[0].prompt
+    assert "C2 (preserves existing behaviour: covered by guard tests): add() keeps working" in implement
+    report = world.report()
+    assert "Covered by guard tests only (keep-working behaviour, R31): C2" in report
+    assert "| C2: add() keeps working | `tests/test_app.py::tests.test_app::test_add` | guard | passed |" in report
+
+
 def test_verify_failed_publishes_nothing(world):
     _verify_never_passes(world)
     world.run()
@@ -395,11 +451,13 @@ def test_state_lost_when_a_gaffer_branch_exists_without_a_job(world):
     assert world.linear.calls == []
 
 
-def test_unknown_reason_from_workspace_is_storable(world):
-    """ADAPTER: workspace's extra reason codes are accepted by store.block()."""
+def test_workspace_and_runner_reasons_are_in_the_stores_list():
+    """store.BLOCKED_REASONS lists workspace's codes, isolation_failed and install_failed
+    itself now (the runner no longer widens it at import)."""
     from gaffer import store as st
 
-    for r in rn.RUNNER_BLOCKED_REASONS:
+    for r in (ws_mod.WRITER_BRANCH_MOVED, ws_mod.WRITER_HISTORY_REWRITTEN, ws_mod.WORKSPACE_TAMPERED,
+              ws_mod.SECRET_SCAN_FAILED, ws_mod.FOREIGN_PR, "isolation_failed", "install_failed"):
         assert r in st.BLOCKED_REASONS
 
 
@@ -522,6 +580,56 @@ def test_codex_findings_are_packet_items(world):
     assert "Off by one" in resume.prompt
 
 
+def test_each_codex_finding_is_in_the_packet_exactly_once(world):
+    """R31 via reviews' admission (codex_reviews=): the runner adds no Codex items of its
+    own, so a finding is never counted twice."""
+    world.children.reviews = [{"summary": "two issues", "harness_judgements": [], "findings": [
+        {"id": "F1", "severity": "major", "path": "src/app/__init__.py", "line": 5, "title": "First finding",
+         "body": "Body one."},
+        {"id": "F2", "severity": "minor", "path": None, "line": None, "title": "Second finding", "body": "Body two."}]}]
+    assert world.run()[0] == 0
+    with world.store() as s:
+        job = s.job_for_issue("ENG-1")
+        packets = s.packets(job.id)
+        codex = [i for i in s.items(job.id) if i.source == "codex"]
+        first = packets[0]
+        packet_items = s.packet_items(first.id)
+    head = world.events("push")[0].detail["head"]
+    assert sorted(i.item_id for i in codex) == [f"{head}/F1", f"{head}/F2"]  # one store row each
+    assert [p.kind for p in packets] == ["round"] and len(packet_items) == 2
+    keys = [k for k in first.content["keys"] if k[0] == "codex"]
+    assert sorted(k[1] for k in keys) == [f"{head}/F1", f"{head}/F2"]
+    assert first.content["text"].count("First finding") == 1 and first.content["text"].count("Second finding") == 1
+    resume = [c for c in world.children.calls if c.kind == "resume"][0]
+    assert resume.prompt.count("First finding") == 1 and resume.prompt.count("Second finding") == 1
+    assert len(resume.item_ids) == 2
+
+
+def test_an_unjustified_harness_judgement_is_a_packet_item_that_uses_a_cycle(world):
+    """R32: the writer reverts or justifies the change in the next resume (a repair cycle)."""
+    def act(call: WriterCall):
+        commit(call.clone, {"src/app/__init__.py": GOOD_SOURCE, "tests/conftest.py": "collect_ignore = []\n"},
+               "feature\n\nTester-Change-Reason: tidy the conftest\n")
+        return {"status": "done", "summary": "x", "question": None}
+
+    world.children.writer_actions = [act, address_decline]  # the writer justifies the change (declines the item)
+    world.children.reviews = [{"summary": "harness touched", "findings": [], "harness_judgements": [
+        {"path": "tests/conftest.py", "verdict": "unjustified", "reason": "The conftest change isn't needed."},
+        {"path": "pyproject.toml", "verdict": "justified", "reason": "A needed dev dependency."}]}]
+    code, out = world.run()
+    assert code == 0, out
+    resume = [c for c in world.children.calls if c.kind == "resume"][0]
+    assert "(from codex at tests/conftest.py)" in resume.prompt
+    assert "[unjustified harness change] tests/conftest.py" in resume.prompt
+    assert "The conftest change isn't needed." in resume.prompt and "A needed dev dependency." not in resume.prompt
+    job = world.job()
+    assert job.cycles_used == 1
+    report = world.report()
+    assert "- [codex] tests/conftest.py: declined: not a real problem" in report  # the item and its disposition
+    assert "`tests/conftest.py`: unjustified (a packet item for the writer, R32)" in report
+    assert "1 unjustified harness change(s)" in world.gh.round_comments()[0]["body"]
+
+
 def test_failed_check_becomes_a_packet_item_with_the_log_tail(world):
     fails = {"n": 0}
 
@@ -579,8 +687,9 @@ def test_newly_synced_plugin_is_blocked_and_the_writer_relaunched_once_with_a_fr
     assert launches[0].session_id != launches[1].session_id
     assert "shiny@synced" in launches[1].plugin_keys
     assert world.job().writer_session_id == launches[1].session_id
-    blocklist = json.loads((world.home / ".gaffer" / rn.PLUGIN_BLOCKLIST).read_text())
-    assert blocklist == {"plugins": ["shiny@synced"]}
+    # children's persistent block list (R31), written by record_blocked_plugins.
+    blocklist = json.loads(ch.Paths.for_home(world.home).blocked_plugins.read_text())
+    assert blocklist == {"plugin_keys": ["shiny@synced"]}
     assert "shiny@synced" in world.report()
 
 
@@ -590,6 +699,69 @@ def test_block_list_persists_across_jobs(world, tmp_path):
     world.linear.issues["ENG-2"] = rn.Issue("ENG-2", "Two", "## Acceptance criteria\n- feature() returns 42\n")
     world.run("ENG-2")
     assert "shiny@synced" in [c for c in world.children.calls if c.kind == "launch"][-1].plugin_keys
+
+
+def test_repo_guidance_is_read_once_and_reused_for_every_writer_prompt(world):
+    """R31, R32: CLAUDE.md and AGENTS.md are read once, after the tester commit and before
+    the writer starts; the writer editing them later changes nothing gaffer sends."""
+    world.mark_pushes({"CLAUDE.md": "Use tabs in CLAUDE.\n", "AGENTS.md": "Agents: run uv.\n"}, branch="main",
+                      message="guidance")
+    world.gh.on_poll = lambda gh, n: gh.add_inline("please fix") if n == 1 else None
+
+    def implement(call: WriterCall):
+        commit(call.clone, {"src/app/__init__.py": GOOD_SOURCE, "CLAUDE.md": "Writer-injected guidance.\n"})
+        return {"status": "done", "summary": "x", "question": None}
+
+    world.children.writer_actions = [implement]
+    code, out = world.run()
+    assert code == 0, out
+    launch, resume = world.children.calls
+    for prompt in (launch.prompt, resume.prompt):
+        assert "Use tabs in CLAUDE." in prompt and "Agents: run uv." in prompt
+        assert "Writer-injected guidance." not in prompt
+    assert len(world.events("repo_guidance")) == 1
+    with world.store() as s:
+        job = s.job_for_issue("ENG-1")
+        tester_commit_event = [e for e in s.events(job.id) if e.kind in ("repo_guidance", "spawned")]
+    kinds = [(e.kind, (e.detail or {}).get("role")) for e in tester_commit_event]
+    assert kinds.index(("repo_guidance", None)) < kinds.index(("spawned", "writer"))
+    assert "Repo guidance (R31, R32): CLAUDE.md included (20 bytes); AGENTS.md included (16 bytes)" in world.report()
+
+
+def test_repo_guidance_survives_a_crash_and_is_not_reread(world):
+    world.mark_pushes({"CLAUDE.md": "Original guidance.\n"}, branch="main", message="guidance")
+
+    def crash(call: WriterCall):
+        commit(call.clone, {"src/app/__init__.py": GOOD_SOURCE, "CLAUDE.md": "Edited by the writer.\n"})
+        raise Crash()
+
+    world.children.writer_actions = [crash]
+    assert world.run()[0] == "crash"
+    world.gh.on_poll = lambda gh, n: gh.add_inline("please fix") if n == 1 else None
+    assert world.run()[0] == 0
+    resume = [c for c in world.children.calls if c.kind == "resume" and c.item_ids][0]
+    assert "Original guidance." in resume.prompt and "Edited by the writer." not in resume.prompt
+    assert len(world.events("repo_guidance")) == 1
+
+
+def test_a_guidance_scanner_error_drops_the_file_and_the_job_goes_on(world):
+    """R32: a scanner error drops that file's guidance with a note; it never stops the job."""
+    world.mark_pushes({"CLAUDE.md": "SCANFAIL guidance\n", "AGENTS.md": "Agents text.\n"}, branch="main",
+                      message="guidance")
+    real = world.scanner.scan
+
+    def scan(text):
+        if "SCANFAIL" in text and not world.children.calls:
+            raise ws_mod.SecretScanError("gitleaks exited 2")
+        return real(text)
+
+    world.scanner.scan = scan
+    code, out = world.run()
+    assert code == 0, out
+    prompt = world.children.calls[0].prompt
+    assert "SCANFAIL guidance" not in prompt and "Agents text." in prompt
+    assert "(none: CLAUDE.md was withheld from the writer: the secret scanner failed (SecretScanError))" in prompt
+    assert "CLAUDE.md was withheld from the writer: the secret scanner failed (SecretScanError)" in world.report()
 
 
 def test_ci_workflow_changes_are_listed_prominently(world):

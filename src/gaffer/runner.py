@@ -11,8 +11,11 @@ counts as a cycle; a head that fails VERIFY is never published), R25
 (synced skills in the report), R29 (GitHub hosts open for PHP repos), R30 (CI
 and harness changes listed prominently), R31 (crashed active job refusal,
 plugin block list and one relaunch, `.git/config` restores in the report,
-Codex findings as packet items, the `<job>` marker), D1 (Linear read-only),
-D2 (one summary comment per round), Arch #3 (argv-only issue key).
+Codex findings as packet items, the `<job>` marker, repo guidance, guard-only
+`preserves` criteria), R32 (a guard failing on base is tester_invalid, a Codex
+"unjustified" harness judgement is a packet item, CLAUDE.md and AGENTS.md as
+guidance), D1 (Linear read-only), D2 (one summary comment per round), Arch #3
+(argv-only issue key).
 
 The job flow ("v0.1 plan as amended by eng review"):
 
@@ -36,7 +39,6 @@ from __future__ import annotations
 import argparse
 import contextlib
 import fcntl
-import hashlib
 import json
 import os
 import random
@@ -82,29 +84,13 @@ WRITER_GROUP_GRACE = 120.0  # R9: before ROUND, wait up to 2 min for the writer'
 
 LINEAR_API = "https://api.linear.app/graphql"
 LINEAR_TOKEN_ACCOUNT = "linear-token"  # Keychain: service "gaffer", account "linear-token"
-PLUGIN_BLOCKLIST = "blocked-plugins.json"  # R31: under ~/.gaffer, persistent across jobs
-
-# BLOCKED reasons this runner can produce that store.BLOCKED_REASONS (T6) doesn't
-# list yet: workspace's own codes (T7 report item 2) plus isolation_failed (R31)
-# and install_failed. ADAPTER: store.block() validates against the module-level
-# frozenset at call time, so the runner widens it here instead of editing store.py.
-RUNNER_BLOCKED_REASONS = frozenset({
-    "isolation_failed",  # R31: init check failed again after the one relaunch
-    "install_failed",  # install_command failed in the job clone or a verification worktree
-    ws_mod.WRITER_BRANCH_MOVED,
-    ws_mod.WRITER_HISTORY_REWRITTEN,
-    ws_mod.WORKSPACE_TAMPERED,
-    ws_mod.SECRET_SCAN_FAILED,
-    ws_mod.FOREIGN_PR,
-})
-st.BLOCKED_REASONS = st.BLOCKED_REASONS | RUNNER_BLOCKED_REASONS
 
 # What the report says for each BLOCKED reason, and what fixes it. The step in
 # brackets is where a rerun re-validates from.
 BLOCKED_HELP: dict[str, str] = {
     "acceptance_criteria_missing": "The Linear issue has no \"Acceptance criteria\" heading or checklist. Add one to the issue and rerun.",
     "tester_failed": "The Codex tester errored, timed out or returned nothing twice. Check the tester log and rerun.",
-    "tester_invalid": "The tester's tests were invalid twice (bad paths, wrong red-first reason, missing coverage). Rerun to try a fresh tester.",
+    "tester_invalid": "The tester's tests were invalid twice (bad paths, wrong red-first reason, a guard test failing on the base, missing coverage). Rerun to try a fresh tester.",
     "already_passing": "Acceptance tests already pass on the base: the issue may already be fixed. Check the listed tests.",
     "no_testable_criteria": "The tester judged every criterion untestable. Make the criteria testable and rerun.",
     "writer_no_result": "The writer returned no valid structured result (or cited a commit that isn't new). Rerun to resume it.",
@@ -145,12 +131,6 @@ RERUN_STEP: dict[str, str] = {
     "repair_limit": "PACKET",
     "acceptance_criteria_missing": "INTAKE",
 }
-
-# Store item sources (T6) vs reviews sources (T8). ADAPTER: the two modules
-# name CI and test items differently.
-_RV_TO_STORE_SOURCE = {"coderabbit": "coderabbit", "operator": "operator", "codex": "codex", "ci": "check", "tests": "test"}
-# children.py lease roles vs store.CHILD_ROLES.
-_STORE_ROLE = {"tester": "tester", "writer": "writer", "reviewer": "reviewer", "test": "test_run", "install": "install"}
 
 Key = tuple[str, str, str]
 
@@ -328,10 +308,11 @@ class ChildrenPort(Protocol):
     def preflight(self, repo: RepoConfig) -> ch.PreflightReport: ...
     def run_tester(self, jobs: ch.JobDirs, prompt: str, *, on_spawn: OnSpawn) -> ch.TesterRun: ...
     def run_reviewer(self, jobs: ch.JobDirs, prompt: str, *, on_spawn: OnSpawn) -> ch.ReviewRun: ...
+    # children merges the persistent plugin block list into every launch and resume itself (R31).
     def launch_writer(self, repo: RepoConfig, jobs: ch.JobDirs, prompt: str, *, session_id: str,
-                      item_ids: Sequence[str] | None, on_spawn: OnSpawn, plugin_keys: Sequence[str]) -> ch.WriterRun: ...
+                      item_ids: Sequence[str] | None, on_spawn: OnSpawn) -> ch.WriterRun: ...
     def resume_writer(self, repo: RepoConfig, jobs: ch.JobDirs, session_id: str, prompt: str, *,
-                      item_ids: Sequence[str] | None, on_spawn: OnSpawn, plugin_keys: Sequence[str]) -> ch.WriterRun: ...
+                      item_ids: Sequence[str] | None, on_spawn: OnSpawn) -> ch.WriterRun: ...
     def run_test_command(self, repo: RepoConfig, jobs: ch.JobDirs, cwd: Path, *, command: str, on_spawn: OnSpawn) -> ch.CommandRun: ...
     def run_install_command(self, repo: RepoConfig, jobs: ch.JobDirs, checkout: Path, *, hosts: Sequence[str],
                             on_spawn: OnSpawn) -> ch.CommandRun: ...
@@ -355,13 +336,13 @@ class RealChildren:
     def run_reviewer(self, jobs, prompt, *, on_spawn):
         return ch.run_reviewer(self.cfg, jobs, prompt, paths=self.paths, on_spawn=on_spawn)
 
-    def launch_writer(self, repo, jobs, prompt, *, session_id, item_ids, on_spawn, plugin_keys):
+    def launch_writer(self, repo, jobs, prompt, *, session_id, item_ids, on_spawn):
         return ch.launch_writer(self.cfg, repo, jobs, prompt, session_id=session_id, item_ids=item_ids, paths=self.paths,
-                                on_spawn=on_spawn, plugin_keys=plugin_keys, group_grace=WRITER_GROUP_GRACE)
+                                on_spawn=on_spawn, group_grace=WRITER_GROUP_GRACE)
 
-    def resume_writer(self, repo, jobs, session_id, prompt, *, item_ids, on_spawn, plugin_keys):
+    def resume_writer(self, repo, jobs, session_id, prompt, *, item_ids, on_spawn):
         return ch.resume_writer(self.cfg, repo, jobs, session_id, prompt, item_ids=item_ids, paths=self.paths,
-                                on_spawn=on_spawn, plugin_keys=plugin_keys, group_grace=WRITER_GROUP_GRACE)
+                                on_spawn=on_spawn, group_grace=WRITER_GROUP_GRACE)
 
     def run_test_command(self, repo, jobs, cwd, *, command, on_spawn):
         return ch.run_test_command(self.cfg, repo, jobs, cwd, command=command, paths=self.paths, on_spawn=on_spawn)
@@ -508,13 +489,8 @@ def _stamp_lock(fd: int, key: str) -> None:
 def job_marker(job: st.Job) -> str:
     """R31: `<job>` in the gaffer-job and gaffer-round markers, the job dir and
     the state dir: the issue key plus the --fresh generation (`ENG-12`, `ENG-12.2`),
-    never the DB row id. ADAPTER: store.Job.ref writes `ENG-12-2`; the runner
-    uses R31's dotted form everywhere it writes a marker."""
-    return job.issue_key if job.generation == 1 else f"{job.issue_key}.{job.generation}"
-
-
-def _sha256(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+    never the DB row id. That is store.Job.ref."""
+    return job.ref
 
 
 def _short(sha: str | None) -> str:
@@ -863,13 +839,13 @@ class Runner:
     # -- children: attempts and leases (R9) ---------------------------------------
 
     def _child(self, job: st.Job, role: str, step: str, session_id: str | None, fn: Callable[[OnSpawn], Any]) -> Any:
+        """role: one of store.CHILD_ROLES (tester, writer, reviewer, test_run, install)."""
         store = self.store
-        store_role = _STORE_ROLE[role]
-        attempt = store.start_attempt(job.id, role=store_role, step=step, session_id=session_id)
+        attempt = store.start_attempt(job.id, role=role, step=step, session_id=session_id)
         leases: list[st.Lease] = []
 
         def on_spawn(lease: ch.ChildLease) -> None:
-            rec = store.acquire_lease(job.id, role=store_role, pid=lease.pid, proc_start=lease.start_time or "unknown",
+            rec = store.acquire_lease(job.id, role=role, pid=lease.pid, proc_start=lease.start_time or "unknown",
                                       pgid=lease.pgid, session_id=lease.session_id, attempt_id=attempt.id)
             leases.append(rec)
             store.log_event(job.id, "spawned", {"role": role, "session_id": lease.session_id, "pid": lease.pid,
@@ -971,13 +947,14 @@ class Runner:
             if result.status is rv_redfirst.RedFirstStatus.OK:
                 job = store.set_tester_commit(job.id, commit, criterion_map=cmap_doc)
                 self._save_ws(job, ws)
+                self._read_guidance(job, ws)  # R31, R32: once, after the tester commit, before the writer
                 return store.set_state(job.id, "WRITER")
             self._reset_to_base(job, ws)
             if result.status is rv_redfirst.RedFirstStatus.ALREADY_PASSING:
                 lst = "; ".join(f"{v.test.identity} (criterion {v.test.criterion_id})" for v in result.already_passing)
                 raise Blocked("already_passing", f"acceptance tests pass on the base: {lst}")
             if attempt == 1:
-                retry = result.retry_feedback()
+                retry = result.retry_feedback()  # R5, R32: invalid reds and failing guards, attached to the retry
                 continue
             raise Blocked("tester_invalid", "red-first failed after one retry:\n" + result.retry_feedback())
         raise AssertionError("unreachable")
@@ -996,7 +973,7 @@ class Runner:
     def _red_first(self, job: st.Job, ws: ws_mod.Workspace, repo: RepoConfig, cmap_doc: Mapping[str, Any],
                    commit: str) -> rv_redfirst.RedFirstResult:
         run, out = self._test_run(job, ws, repo, commit, "RED_FIRST")
-        cmap = _criterion_map(cmap_doc)
+        cmap = rv_junit.CriterionMap.from_tester_output(cmap_doc)
         result = rv_redfirst.classify_red_first(cmap, run)
         self.store.record_test_run(job.id, head_sha=job.base_sha, kind="red_first", results=_case_results(run, cmap),
                                    exit_code=out.exit_code if out else None, junit_found=run.usable)
@@ -1023,7 +1000,7 @@ class Runner:
                 junit = vc.path / repo.junit_path
                 junit.unlink(missing_ok=True)
                 cmd = rv_junit.phpunit_file_command(repo.test_command, f)
-                out = self._child(job, "test", step, None, lambda on_spawn, cmd=cmd: self.children.run_test_command(
+                out = self._child(job, "test_run", step, None, lambda on_spawn, cmd=cmd: self.children.run_test_command(
                     repo, jobs, vc.path, command=cmd, on_spawn=on_spawn))
                 runs.append(rv_junit.PhpunitFileRun(f, junit.read_bytes() if junit.is_file() else None,
                                                     out.output_tail + out.stderr_tail))
@@ -1032,7 +1009,7 @@ class Runner:
         junit.unlink(missing_ok=True)
         env = rv_junit.runner_env(repo.runner, repo.junit_path)
         prefix = "".join(f"export {k}={shlex.quote(v)}; " for k, v in env.items())
-        out = self._child(job, "test", step, None, lambda on_spawn: self.children.run_test_command(
+        out = self._child(job, "test_run", step, None, lambda on_spawn: self.children.run_test_command(
             repo, jobs, vc.path, command=prefix + repo.test_command, on_spawn=on_spawn))
         data = junit.read_bytes() if junit.is_file() else None
         root = vc.path
@@ -1058,9 +1035,12 @@ class Runner:
                 job = self.store.set_writer_session(job.id, session)  # R9: recorded before launch
             issue = self._issue(job)
             tr = _tester_result(job.criterion_map)
+            # Normally read right after the tester commit; read here if gaffer died in between. No
+            # writer has run yet, so the clone is still at the tester commit.
+            guidance = self._read_guidance(job, ws)
             prompt = ch.implement_prompt(repo, self._jobs(job, ws), issue_key=job.issue_key, issue_title=issue.title,
                                          issue_body=issue.description, tester=tr, tester_commit=job.tester_commit_sha,
-                                         base_sha=job.base_sha)
+                                         base_sha=job.base_sha, guidance=guidance)
             run = self._launch(job, ws, repo, session, prompt, item_ids=None, step="WRITER")
         self._finish_writer(job, ws, repo, run, previous_head=job.tester_commit_sha, item_ids=None, step="WRITER")
         return self.store.set_state(job.id, "VERIFY")
@@ -1069,52 +1049,48 @@ class Runner:
         return any((e.detail or {}).get("session_id") == session and (e.detail or {}).get("role") == "writer"
                    for e in self.store.events(job.id, "spawned"))
 
-    def _blocked_plugins(self) -> list[str]:
-        """R31: the persistent plugin block list under ~/.gaffer. children.py takes the
-        keys per launch (`plugin_keys=`) but doesn't persist them, so the runner does."""
-        path = gaffer_dir(self.d.home) / PLUGIN_BLOCKLIST
-        try:
-            data = json.loads(path.read_text())
-        except FileNotFoundError:
-            return []
-        except ValueError:
-            raise Refused(f"{path} is not valid JSON; fix or remove it.") from None
-        keys = data.get("plugins") if isinstance(data, dict) else None
-        if not isinstance(keys, list) or not all(isinstance(k, str) for k in keys):
-            raise Refused(f"{path} must be {{\"plugins\": [\"<key>\", ...]}}.")
-        return keys
+    # -- repo guidance (R31, R32) -------------------------------------------------
 
-    def _block_plugins(self, keys: Sequence[str]) -> None:
-        path = gaffer_dir(self.d.home) / PLUGIN_BLOCKLIST
-        merged = list(dict.fromkeys([*self._blocked_plugins(), *keys]))
-        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-        tmp = path.with_name(path.name + ".tmp")
-        tmp.write_text(json.dumps({"plugins": merged}, indent=2) + "\n")
-        os.chmod(tmp, 0o600)
-        os.replace(tmp, path)
+    def _guidance(self, job: st.Job) -> ch.RepoGuidance | None:
+        """The guidance read for this job, reused for every writer prompt so the writer
+        can't feed itself "guidance" by editing CLAUDE.md or AGENTS.md. None if never read."""
+        ev = self.store.events(job.id, "repo_guidance")
+        return ch.RepoGuidance.from_dict(ev[-1].detail) if ev else None
 
-    def _init_failed(self, job: st.Job, e: ch.InitCheckFailed, attempt: int, *, what: str) -> list[str]:
-        """R31: returns the newly learned plugin keys to block before the one relaunch;
-        raises BLOCKED: isolation_failed for anything else or a second failure."""
-        plugins = ch.plugin_keys_from_init(e.init or {})
-        other = [p for p in e.problems if not p.startswith("plugins loaded")]
-        new = [p for p in plugins if p not in self._blocked_plugins()]
-        self.store.log_event(job.id, "init_check_failed", {"what": what, "problems": list(e.problems), "plugins": plugins,
-                                                           "attempt": attempt})
-        if attempt >= 2 or other or not new:
+    def _read_guidance(self, job: st.Job, ws: ws_mod.Workspace) -> ch.RepoGuidance:
+        """Read once, after the tester commit and before the writer starts, and record it."""
+        guidance = self._guidance(job)
+        if guidance is None:
+            guidance = ch.read_repo_guidance(ws.clone, self.d.scanner)
+            self.store.log_event(job.id, "repo_guidance", guidance.to_dict())
+        return guidance
+
+    # -- init check and the plugin block list (R28, R31) ---------------------------
+
+    def _init_failed(self, job: st.Job, e: ch.InitCheckFailed, attempt: int, *, what: str) -> None:
+        """R31: when loaded plugins were the only problem, record their keys in the persistent
+        block list (children merges it into every later launch) and allow one relaunch. Any other
+        problem, a second failure, or plugins already on the list is BLOCKED: isolation_failed."""
+        self.store.log_event(job.id, "init_check_failed", {"what": what, "problems": list(e.problems),
+                                                           "plugins": list(e.plugin_keys), "attempt": attempt})
+        if attempt >= 2 or not e.plugins_only:
             raise Blocked("isolation_failed", f"{what} was killed at its init event"
                           + (" again after one relaunch" if attempt >= 2 else "") + ": " + "; ".join(e.problems))
-        self._block_plugins(new)
-        self.store.log_event(job.id, "plugins_blocked", {"plugins": new})
-        return new
+        new = ch.record_blocked_plugins(self._blocked_plugins_path(), e.plugin_keys)
+        if not new:
+            raise Blocked("isolation_failed", f"{what} loaded plugins that are already on the block list "
+                          f"({', '.join(e.plugin_keys)}), so a relaunch wouldn't help: " + "; ".join(e.problems))
+        self.store.log_event(job.id, "plugins_blocked", {"plugins": list(new)})
+
+    def _blocked_plugins_path(self) -> Path:
+        return ch.Paths.for_home(self.d.home).blocked_plugins
 
     def _launch(self, job: st.Job, ws: ws_mod.Workspace, repo: RepoConfig, session: str, prompt: str, *,
                 item_ids: Sequence[str] | None, step: str) -> ch.WriterRun:
         for attempt in (1, 2):
             try:
                 return self._child(job, "writer", step, session, lambda on_spawn: self.children.launch_writer(
-                    repo, self._jobs(job, ws), prompt, session_id=session, item_ids=item_ids, on_spawn=on_spawn,
-                    plugin_keys=self._blocked_plugins()))
+                    repo, self._jobs(job, ws), prompt, session_id=session, item_ids=item_ids, on_spawn=on_spawn))
             except ch.InitCheckFailed as e:
                 self._init_failed(job, e, attempt, what="the writer")
                 # The killed child may already have created the session: relaunch with a fresh ID (T5).
@@ -1127,8 +1103,7 @@ class Runner:
         for attempt in (1, 2):
             try:
                 run = self._child(job, "writer", step, session, lambda on_spawn: self.children.resume_writer(
-                    repo, self._jobs(job, ws), session, prompt, item_ids=item_ids, on_spawn=on_spawn,
-                    plugin_keys=self._blocked_plugins()))
+                    repo, self._jobs(job, ws), session, prompt, item_ids=item_ids, on_spawn=on_spawn))
                 break
             except ch.InitCheckFailed as e:
                 # A resume keeps its session: the session already exists, and the child died before acting.
@@ -1149,7 +1124,7 @@ class Runner:
         tr = _tester_result(job.criterion_map)
         base = ch.implement_prompt(repo, self._jobs(job, ws), issue_key=job.issue_key, issue_title=issue.title,
                                    issue_body=issue.description, tester=tr, tester_commit=job.tester_commit_sha,
-                                   base_sha=job.base_sha)
+                                   base_sha=job.base_sha, guidance=self._guidance(job))
         stat = ws_mod._out(ws.clone, "diff", "--stat", f"{job.base_sha}..HEAD")
         log = ws_mod._out(ws.clone, "log", "--oneline", f"{job.base_sha}..HEAD")
         return (f"{base}\n\n## Handoff (fresh session)\n\nA previous writer session for this job couldn't be resumed. "
@@ -1207,7 +1182,7 @@ class Runner:
         ws = self._ws_of(job)
         head = self._local_head(ws)
         run, out = self._test_run(job, ws, repo, head, "VERIFY")
-        cmap = _criterion_map(job.criterion_map)
+        cmap = rv_junit.CriterionMap.from_tester_output(job.criterion_map)
         inv = rv_junit.match_inventory(cmap, run)
         regressions = self._regressions(job, run, cmap)
         self.store.record_test_run(job.id, head_sha=head, kind="verify", results=_case_results(run, cmap, inv),
@@ -1223,15 +1198,15 @@ class Runner:
         # R24: a local packet resumes the same session and counts as a repair cycle; nothing is published.
         failing = list(inv.failing) + regressions
         pkt = rv_packet.build_packet(head_sha=head, seq=0, scanner=PacketScanner(self.d.scanner), failing_tests=failing)
-        by_identity: dict[str, int] = {}
-        for entry, text in ((e, rv_packet.render_failing_test(e)) for e in failing):
-            item, _ = self.store.add_item(job.id, source="test", item_id=f"{head}:{entry.test.identity}",
-                                          content_hash=_sha256(text), head_sha=head,
+        by_key: dict[Key, int] = {}
+        for entry in failing:
+            key = rv_packet.failing_test_key(head, entry)  # the same key build_packet used (R31)
+            item, _ = self.store.add_item(job.id, source=key[0], item_id=key[1], content_hash=key[2], head_sha=head,
                                           payload={"kind": "failing_test", "test": entry.test.identity,
                                                    "criterion": entry.test.criterion_id, "outcome": entry.outcome.value,
-                                                   "text": text})
-            by_identity[entry.test.identity] = item.id
-        ids = [by_identity[k[1]] for k in pkt.included_keys if k[1] in by_identity]
+                                                   "text": rv_packet.render_failing_test(entry)})
+            by_key[key] = item.id
+        ids = [by_key[k] for k in pkt.included_keys]
         ids = [i for i in dict.fromkeys(ids) if self.store.get_item(i).packet_id is None]
         if not ids:
             raise Blocked("verify_failed", f"gaffer's test run on {_short(head)} failed and no new item could be "
@@ -1331,14 +1306,17 @@ class Runner:
         r = run.result
         doc = {"summary": r.summary, "findings": [asdict(f) for f in r.findings],
                "harness_judgements": [asdict(j) for j in r.harness_judgements]}
+        # The findings (R31) and "unjustified" harness judgements (R32) become packet items through
+        # the round's admission (codex_reviews=), alongside CodeRabbit items: never added here too.
         self.store.record_review(job.id, head_sha=head, result=doc)
-        # R31: Codex review findings are packet items, admitted alongside CodeRabbit items and failed checks.
-        for f in r.findings:
-            body = f"[{f.severity}] {f.title}\n\n{f.body}"
-            self.store.add_item(job.id, source="codex", item_id=f"{head}:{f.id}", content_hash=rv_cr.content_hash(body),
-                                head_sha=head, payload={"source": "codex", "item_id": f"{head}:{f.id}", "kind": "codex_finding",
-                                                        "author": "codex", "body": rv_cr.normalize_body(body),
-                                                        "path": f.path, "line_start": f.line, "line_end": f.line})
+
+    def _codex_reviews(self, job: st.Job, head: str) -> list[rv_cr.CodexReview]:
+        """The Codex review recorded for the head, for reviews' admission (R31, R32)."""
+        rev = self.store.review_for_head(job.id, head)
+        if rev is None:
+            return []
+        return [rv_cr.CodexReview(head, tuple(rev.result.get("findings") or ()),
+                                  tuple(rev.result.get("harness_judgements") or ()))]
 
     # -- ROUND --------------------------------------------------------------------
 
@@ -1364,11 +1342,12 @@ class Runner:
                 rnd.tick()
                 snap = rv_rounds.fetch_snapshot(gh.reader, repo.github, job.pr_number, head)
                 self._check_pull(job, snap.pull, head=head)
+                codex = self._codex_reviews(job, head)
                 obs = rv_rounds.evaluate_snapshot(snap, repo=repo, operator_login=self.cfg.operator_login,
                                                   processed_keys=self._processed_keys(job),
-                                                  seconds_since_push=rnd.state.seconds_since_push)
-                out = rnd.observe(checks=obs.checks, codex_recorded=store.review_for_head(job.id, head) is not None,
-                                  coderabbit=obs.coderabbit, pending_keys=obs.pending_keys)
+                                                  seconds_since_push=rnd.state.seconds_since_push, codex_reviews=codex)
+                out = rnd.observe(checks=obs.checks, codex_recorded=bool(codex), coderabbit=obs.coderabbit,
+                                  pending_keys=obs.pending_keys)
             except (rv_github.GitHubError, ws_mod.GitHubError, rv_cr.IncompleteData) as e:
                 # API errors never count as an empty or completed review (design).
                 store.log_event(job.id, "poll_error", {"error": str(e)[:500]}, round_id=row.id)
@@ -1429,8 +1408,8 @@ class Runner:
             it = admitted.get(key)
             if it is None:
                 continue
-            store.add_item(job.id, source=_RV_TO_STORE_SOURCE[str(it.key[0])], item_id=it.item_id,
-                           content_hash=it.content_hash, head_sha=row.head_sha, round_id=row.id, payload=_item_doc(it))
+            store.add_item(job.id, source=it.key[0], item_id=it.item_id, content_hash=it.content_hash,
+                           head_sha=row.head_sha, round_id=row.id, payload=_item_doc(it))
         checks = out.checks or obs.checks
         failed = [v.check_run for v in checks.failed if v.check_run is not None]
         store.log_event(job.id, "round_outcome", {
@@ -1475,22 +1454,22 @@ class Runner:
         if open_pkt is not None:
             return store.set_state(job.id, "RESUME")
         outcome = self._round_outcome(job, rnd)
+        # The round's admitted items: CodeRabbit, operator and Codex (findings and unjustified
+        # harness judgements), each exactly once, keyed as reviews keyed them.
         packet_keys = {tuple(k) for k in outcome.get("packet_keys", ())}
-        items = [i for i in store.pending_items(job.id)
-                 if (i.source in ("coderabbit", "operator") and (i.source, i.item_id, i.content_hash) in packet_keys)
-                 or (i.source == "codex" and i.head_sha == rnd.head_sha)]
+        items = [i for i in store.pending_items(job.id) if (i.source, i.item_id, i.content_hash) in packet_keys]
+        by_key: dict[Key, int] = {(i.source, i.item_id, i.content_hash): i.id for i in items}
         gh = self._github(repo)
         evidence: list[rv_checks.CheckEvidence] = []
-        check_items: dict[str, int] = {}
         for cr in outcome.get("failed_check_runs", ()):
             e = rv_checks.collect_check_evidence(gh.reader, repo.github, cr)
-            text = rv_packet.render_check(e)
-            item, _ = store.add_item(job.id, source="check", item_id=f"{rnd.head_sha}:{e.check_run_id}",
-                                     content_hash=_sha256(text), head_sha=rnd.head_sha, round_id=rnd.id,
-                                     payload={"kind": "failed_check", "name": e.name, "text": text})
+            key = rv_packet.failed_check_key(rnd.head_sha, e)  # the same key build_packet uses (R31)
+            item, _ = store.add_item(job.id, source=key[0], item_id=key[1], content_hash=key[2], head_sha=rnd.head_sha,
+                                     round_id=rnd.id, payload={"kind": "failed_check", "name": e.name,
+                                                               "text": rv_packet.render_check(e)})
             if item.packet_id is None:
                 evidence.append(e)
-                check_items[str(e.check_run_id)] = item.id
+                by_key[key] = item.id
         if not items and not evidence:
             self._post_round_comment(job, repo, rnd, None)
             store.log_event(job.id, "round_consumed", {"round_id": rnd.id})
@@ -1498,13 +1477,7 @@ class Runner:
         fb = [_feedback_item(i) for i in items]
         pkt = rv_packet.build_packet(head_sha=rnd.head_sha, seq=rnd.seq, scanner=PacketScanner(self.d.scanner),
                                      items=fb, failed_checks=evidence)
-        by_key = {(i.source, i.item_id, i.content_hash): i.id for i in items}
-        ids: list[int] = []
-        for k in pkt.included_keys:
-            if k[0] == "ci":
-                ids.append(check_items[k[1]])
-            else:
-                ids.append(by_key[(_RV_TO_STORE_SOURCE[k[0]], k[1], k[2])])
+        ids = [by_key[k] for k in pkt.included_keys]
         try:
             store.create_packet(job.id, kind="round", head_sha=rnd.head_sha, round_id=rnd.id, item_ids=ids,
                                 content={"text": pkt.text, "keys": [list(k) for k in pkt.included_keys],
@@ -1529,7 +1502,7 @@ class Runner:
         item_ids = [str(i.id) for i in items]
         prompt_items = [ch.PromptItem(str(i.id), _prompt_source(i), _prompt_location(i), _prompt_body(i)) for i in items]
         prompt = ch.address_prompt(repo, head_sha=packet.head_sha, items=prompt_items, cycle=packet.cycle,
-                                   max_cycles=job.cycle_limit)
+                                   max_cycles=job.cycle_limit, guidance=self._guidance(job))
         session = job.writer_session_id
         store.mark_resume_started(packet.id)
         if session is None:
@@ -1583,7 +1556,9 @@ class Runner:
             lines.append("- Required checks: " + ", ".join(f"{c['name']} {c['state']}" for c in checks))
         review = self.store.review_for_head(job.id, rnd.head_sha)
         if review is not None:
-            lines.append(f"- Codex review: {len(review.result.get('findings', []))} finding(s)")
+            unjustified = [j for j in review.result.get("harness_judgements", []) if j.get("verdict") == "unjustified"]
+            lines.append(f"- Codex review: {len(review.result.get('findings', []))} finding(s)"
+                         + (f", {len(unjustified)} unjustified harness change(s)" if unjustified else ""))
         if packet is None:
             lines.append("- Feedback: nothing to address in this round.")
         else:
@@ -1717,9 +1692,12 @@ def _usage(result: Any) -> Any:
 
 
 def _criterion_doc(tr: ch.TesterResult, write: ws_mod.TesterWrite) -> dict[str, Any]:
+    """The stored criterion map: children.TESTER_SCHEMA's shape (without file contents),
+    so reviews' CriterionMap.from_tester_output reads it as is, plus the files the tester
+    created and modified (R6). `preserves` marks guard-only criteria (R31)."""
     return {
-        "criteria": [list(c) for c in tr.criteria],
-        "untestable": [list(u) for u in tr.untestable],
+        "criteria": [{"id": cid, "text": text, "preserves": cid in tr.preserves} for cid, text in tr.criteria],
+        "untestable": [{"criterion_id": cid, "reason": reason} for cid, reason in tr.untestable],
         "tests": [{"criterion_id": t.criterion_id, "label": t.label, "file": t.identity.file,
                    "classname": t.identity.classname, "name": t.identity.name} for t in tr.tests],
         "expected_missing": list(tr.expected_missing),
@@ -1730,24 +1708,13 @@ def _criterion_doc(tr: ch.TesterResult, write: ws_mod.TesterWrite) -> dict[str, 
 
 def _tester_result(doc: Mapping[str, Any]) -> ch.TesterResult:
     return ch.TesterResult(
-        criteria=tuple((c[0], c[1]) for c in doc["criteria"]),
-        untestable=tuple((u[0], u[1]) for u in doc["untestable"]),
+        criteria=tuple((c["id"], c["text"]) for c in doc["criteria"]),
+        untestable=tuple((u["criterion_id"], u["reason"]) for u in doc["untestable"]),
         tests=tuple(ch.TesterTest(t["criterion_id"], t["label"], ch.TestIdentity(t["file"], t["classname"], t["name"]))
                     for t in doc["tests"]),
         expected_missing=tuple(doc["expected_missing"]),
         files=(),
-    )
-
-
-def _criterion_map(doc: Mapping[str, Any]) -> rv_junit.CriterionMap:
-    """ADAPTER: built here rather than with CriterionMap.from_tester_output, which
-    reads `untestable[].id` while children's tester schema says `criterion_id`."""
-    untestable = {u[0] for u in doc["untestable"]}
-    return rv_junit.CriterionMap(
-        tests=tuple(rv_junit.ExpectedTest(t["criterion_id"], rv_junit.Label(t["label"]), t["file"], t["classname"], t["name"])
-                    for t in doc["tests"]),
-        expected_missing=tuple(doc["expected_missing"]),
-        testable_criteria=tuple(c[0] for c in doc["criteria"] if c[0] not in untestable),
+        preserves=tuple(c["id"] for c in doc["criteria"] if c.get("preserves")),
     )
 
 
@@ -1900,7 +1867,7 @@ def build_report(store: st.Store, cfg: Config, job: st.Job) -> str:
         lines.append(f"- Head `{_short(v['head'])}`: {'passed' if v['passed'] else 'FAILED'}")
         for note in v.get("notes", []):
             lines.append(f"- Note: {note}")
-        texts = {c[0]: c[1] for c in cmap.get("criteria", [])}
+        texts = {c["id"]: c["text"] for c in cmap.get("criteria", [])}
         lines.append("")
         lines.append("| Criterion | Test | Label | Result |")
         lines.append("|---|---|---|---|")
@@ -1913,7 +1880,11 @@ def build_report(store: st.Store, cfg: Config, job: st.Job) -> str:
     lines.append("")
     if cmap.get("untestable"):
         lines.append("## Unverified criteria (untestable)")
-        lines += [f"- {u[0]}: {u[1]}" for u in cmap["untestable"]]
+        lines += [f"- {u['criterion_id']}: {u['reason']}" for u in cmap["untestable"]]
+        lines.append("")
+    preserves = [c["id"] for c in cmap.get("criteria", []) if c.get("preserves")]
+    if preserves:
+        lines.append(f"- Covered by guard tests only (keep-working behaviour, R31): {', '.join(preserves)}")
         lines.append("")
     if cmap.get("created") or cmap.get("modified"):
         lines.append("## Tester files (R6)")
@@ -1948,7 +1919,8 @@ def build_report(store: st.Store, cfg: Config, job: st.Job) -> str:
         lines.append("## Codex review of the head")
         lines.append(f"- {rev.result.get('summary', '')}")
         for j in rev.result.get("harness_judgements", []):
-            lines.append(f"- Harness change `{j['path']}`: {j['verdict']} — {j['reason']}")
+            item = " (a packet item for the writer, R32)" if j["verdict"] == "unjustified" else ""
+            lines.append(f"- Harness change `{j['path']}`: {j['verdict']}{item} — {j['reason']}")
         lines.append("")
 
     # Dispositions of every feedback item, and ignored ones (R12).
@@ -1987,6 +1959,9 @@ def build_report(store: st.Store, cfg: Config, job: st.Job) -> str:
         lines.append(f"- MCP servers outside the sandbox (R3): {', '.join(mcp) if mcp else 'none'}")
     if repo is not None:
         lines.append(f"- Writer model: {cfg.writer_model} (R30); network allowlist: {', '.join(repo.network_allowlist) or 'none'}")
+    guidance = ev("repo_guidance")
+    lines.append(f"- Repo guidance (R31, R32): {ch.RepoGuidance.from_dict(guidance[-1].detail).note}" if guidance
+                 else "- Repo guidance (R31, R32): not read (no writer started)")
     skills = sorted({s for e in ev("writer_run") for s in e.detail.get("skills", [])})
     lines.append(f"- Synced skills the writer saw (R28): {', '.join(skills) if skills else 'none'}")
     blocked_plugins = [p for e in ev("plugins_blocked") for p in e.detail.get("plugins", [])]
