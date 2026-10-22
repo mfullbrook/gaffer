@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- What jest-junit writes when Jest ran no tests (the sandboxed watchman failure, exit 0; R28). -->
+<testsuites name="jest tests" tests="0" failures="0" errors="0" time="0.012">
+</testsuites>

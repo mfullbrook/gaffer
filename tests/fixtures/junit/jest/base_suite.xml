@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Reconstructed from spike/evidence/d_js_suite.json: a missing require() seeded at the top of shout.test.js. -->
+<testsuites name="jest tests" tests="3" failures="3" errors="1" time="0.162">
+  <testsuite name="wordCount" errors="0" failures="2" skipped="0" timestamp="2026-10-21T20:27:03" time="0.06" tests="2">
+    <testcase classname="__tests__/wordCount.test.js" name="wordCount counts words separated by mixed whitespace" time="0.001" file="__tests__/wordCount.test.js">
+      <failure>TypeError: wordCount is not a function
+    at Object.wordCount (/private/var/folders/gaffer/job/verify/__tests__/wordCount.test.js:5:12)</failure>
+    </testcase>
+    <testcase classname="__tests__/wordCount.test.js" name="wordCount returns zero for empty and whitespace-only text" time="0" file="__tests__/wordCount.test.js">
+      <failure>TypeError: wordCount is not a function
+    at Object.wordCount (/private/var/folders/gaffer/job/verify/__tests__/wordCount.test.js:10:12)</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="__tests__/shout.test.js" errors="1" failures="1" skipped="0" timestamp="2026-10-21T20:27:03" time="0" tests="1">
+    <testcase classname="Test suite failed to run" name="__tests__/shout.test.js" time="0" file="__tests__/shout.test.js">
+      <error>  ● Test suite failed to run
+
+    Cannot find module '../src/does-not-exist' from '__tests__/shout.test.js'
+
+    &gt; 1 | const helper = require('../src/does-not-exist');
+        |                ^
+      2 | const { shout } = require('../src/strings');
+      3 |
+      4 | describe('shout', () =&gt; {
+
+      at Resolver._throwModNotFoundError (../repo/node_modules/jest-resolve/build/index.js:1031:11)
+      at Object.require (__tests__/shout.test.js:1:16)
+</error>
+    </testcase>
+    <testcase classname="Test suite failed to run" name="__tests__/shout.test.js" time="0" file="__tests__/shout.test.js">
+      <failure>{"code":"MODULE_NOT_FOUND","hint":"","requireStack":["/private/var/folders/gaffer/job/verify/__tests__/shout.test.js"],"siblingWithSimilarExtensionFound":false,"moduleName":"../src/does-not-exist","_originalMessage":"Cannot find module '../src/does-not-exist' from '__tests__/shout.test.js'"}</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2026-10-21T20:27:03" time="0.04" tests="1">
+    <testcase classname="__tests__/strings.test.js" name=" shout uppercases" time="0" file="__tests__/strings.test.js">
+    </testcase>
+  </testsuite>
+</testsuites>

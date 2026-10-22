@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Reconstructed from spike/evidence/d_js_clean.json (jest-junit with the spike's env, jest run with no-watchman). -->
+<testsuites name="jest tests" tests="5" failures="3" errors="0" time="0.25">
+  <testsuite name="shout" errors="0" failures="1" skipped="0" timestamp="2026-10-21T20:20:11" time="0.08" tests="2">
+    <testcase classname="__tests__/shout.test.js" name="shout trims surrounding whitespace before upper-casing" time="0.002" file="__tests__/shout.test.js">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+- Expected  - 1
++ Received  + 2
+
+- HELLO WORLD
++  	HELLO WORLD
++
+    at Object.toBe (/private/var/folders/gaffer/job/verify/__tests__/shout.test.js:5:40)
+    at Promise.finally.completed (/private/var/folders/gaffer/job/repo/node_modules/jest-circus/build/jestAdapterInit.js:1834:28)
+    at new Promise (&lt;anonymous&gt;)</failure>
+    </testcase>
+    <testcase classname="__tests__/shout.test.js" name="shout upper-cases inner text while preserving inner whitespace" time="0.001" file="__tests__/shout.test.js">
+    </testcase>
+  </testsuite>
+  <testsuite name="wordCount" errors="0" failures="2" skipped="0" timestamp="2026-10-21T20:20:11" time="0.07" tests="2">
+    <testcase classname="__tests__/wordCount.test.js" name="wordCount counts words separated by mixed whitespace" time="0.001" file="__tests__/wordCount.test.js">
+      <failure>TypeError: wordCount is not a function
+    at Object.wordCount (/private/var/folders/gaffer/job/verify/__tests__/wordCount.test.js:5:12)
+    at Promise.finally.completed (/private/var/folders/gaffer/job/repo/node_modules/jest-circus/build/jestAdapterInit.js:1834:28)</failure>
+    </testcase>
+    <testcase classname="__tests__/wordCount.test.js" name="wordCount returns zero for empty and whitespace-only text" time="0" file="__tests__/wordCount.test.js">
+      <failure>TypeError: wordCount is not a function
+    at Object.wordCount (/private/var/folders/gaffer/job/verify/__tests__/wordCount.test.js:10:12)
+    at Promise.finally.completed (/private/var/folders/gaffer/job/repo/node_modules/jest-circus/build/jestAdapterInit.js:1834:28)</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2026-10-21T20:20:11" time="0.05" tests="1">
+    <testcase classname="__tests__/strings.test.js" name=" shout uppercases" time="0" file="__tests__/strings.test.js">
+    </testcase>
+  </testsuite>
+</testsuites>

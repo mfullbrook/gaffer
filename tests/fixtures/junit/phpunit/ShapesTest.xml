@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Reconstructed from spike/evidence/p_phpunit.txt ("shapes"): phpunit tests/ShapesTest.php with log-junit and do-not-cache-result. -->
+<testsuites>
+  <testsuite name="Toy\Tests\ShapesTest" file="/private/var/folders/gaffer/job/verify/tests/ShapesTest.php" tests="9" assertions="3" errors="5" failures="1" skipped="2" time="0.003921">
+    <testcase name="testPasses" file="/private/var/folders/gaffer/job/verify/tests/ShapesTest.php" line="10" class="Toy\Tests\ShapesTest" classname="Toy.Tests.ShapesTest" assertions="1" time="0.000874"/>
+    <testcase name="testAssertionFailure" file="/private/var/folders/gaffer/job/verify/tests/ShapesTest.php" line="11" class="Toy\Tests\ShapesTest" classname="Toy.Tests.ShapesTest" assertions="1" time="0.000598">
+      <failure type="PHPUnit\Framework\ExpectationFailedException">Toy\Tests\ShapesTest::testAssertionFailure
+Failed asserting that two strings are identical.
+--- Expected
++++ Actual
+@@ @@
+-'HI'
++'HI!'
+
+/private/var/folders/gaffer/job/verify/tests/ShapesTest.php:11</failure>
+    </testcase>
+    <testcase name="testRuntimeException" file="/private/var/folders/gaffer/job/verify/tests/ShapesTest.php" line="12" class="Toy\Tests\ShapesTest" classname="Toy.Tests.ShapesTest" assertions="0" time="0.000201">
+      <error type="RuntimeException">Toy\Tests\ShapesTest::testRuntimeException
+RuntimeException: boom
+
+/private/var/folders/gaffer/job/verify/tests/ShapesTest.php:12</error>
+    </testcase>
+    <testcase name="testTypeError" file="/private/var/folders/gaffer/job/verify/tests/ShapesTest.php" line="13" class="Toy\Tests\ShapesTest" classname="Toy.Tests.ShapesTest" assertions="0" time="0.000190">
+      <error type="TypeError">Toy\Tests\ShapesTest::testTypeError
+TypeError: Toy\Strings::shout(): Argument #1 ($s) must be of type string, null given, called in /private/var/folders/gaffer/job/verify/tests/ShapesTest.php on line 13
+
+/private/var/folders/gaffer/job/verify/src/Strings.php:8
+/private/var/folders/gaffer/job/verify/tests/ShapesTest.php:13</error>
+    </testcase>
+    <testcase name="testMissingClass" file="/private/var/folders/gaffer/job/verify/tests/ShapesTest.php" line="14" class="Toy\Tests\ShapesTest" classname="Toy.Tests.ShapesTest" assertions="0" time="0.000235">
+      <error type="Error">Toy\Tests\ShapesTest::testMissingClass
+Error: Class "Toy\WordCounter" not found
+
+/private/var/folders/gaffer/job/verify/tests/ShapesTest.php:14</error>
+    </testcase>
+    <testcase name="testMissingFunction" file="/private/var/folders/gaffer/job/verify/tests/ShapesTest.php" line="15" class="Toy\Tests\ShapesTest" classname="Toy.Tests.ShapesTest" assertions="0" time="0.000188">
+      <error type="Error">Toy\Tests\ShapesTest::testMissingFunction
+Error: Call to undefined function Toy\word_count()
+
+/private/var/folders/gaffer/job/verify/tests/ShapesTest.php:15</error>
+    </testcase>
+    <testcase name="testTypoUndefinedMethod" file="/private/var/folders/gaffer/job/verify/tests/ShapesTest.php" line="16" class="Toy\Tests\ShapesTest" classname="Toy.Tests.ShapesTest" assertions="0" time="0.000179">
+      <error type="Error">Toy\Tests\ShapesTest::testTypoUndefinedMethod
+Error: Call to undefined method Toy\Strings::shuot()
+
+/private/var/folders/gaffer/job/verify/tests/ShapesTest.php:16</error>
+    </testcase>
+    <testcase name="testSkipped" file="/private/var/folders/gaffer/job/verify/tests/ShapesTest.php" line="17" class="Toy\Tests\ShapesTest" classname="Toy.Tests.ShapesTest" assertions="0" time="0.000150">
+      <skipped/>
+    </testcase>
+    <testcase name="testIncomplete" file="/private/var/folders/gaffer/job/verify/tests/ShapesTest.php" line="18" class="Toy\Tests\ShapesTest" classname="Toy.Tests.ShapesTest" assertions="0" time="0.000324">
+      <skipped/>
+    </testcase>
+  </testsuite>
+</testsuites>

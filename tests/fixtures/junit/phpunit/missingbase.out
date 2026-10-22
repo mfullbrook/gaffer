@@ -1,0 +1,14 @@
+PHPUnit 11.5.57 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.4.22
+
+An error occurred inside PHPUnit.
+
+Message:  Class "Toy\Testing\WordCase" not found
+Location: /private/var/folders/gaffer/job/verify/tests/MissingBaseTest.php:5
+
+#0 /private/var/folders/gaffer/job/verify/vendor/phpunit/phpunit/src/Runner/TestSuiteLoader.php(56): require_once()
+#1 /private/var/folders/gaffer/job/verify/vendor/phpunit/phpunit/src/TextUI/Configuration/TestSuiteBuilder.php(75): PHPUnit\TextUI\XmlConfiguration\TestSuiteMapper->map('/private/var/fo...', Object(PHPUnit\TextUI\Configuration\TestSuiteCollection), '', '')
+#2 /private/var/folders/gaffer/job/verify/vendor/phpunit/phpunit/src/TextUI/Application.php(412): PHPUnit\TextUI\Configuration\TestSuiteBuilder->build(Object(PHPUnit\TextUI\Configuration\Configuration))
+#3 /private/var/folders/gaffer/job/verify/vendor/bin/phpunit(122): include('/private/var/fo...')
+#4 {main}

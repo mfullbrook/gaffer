@@ -1,0 +1,11 @@
+PHPUnit 11.5.57 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.4.22
+
+An error occurred inside PHPUnit.
+
+Message:  syntax error, unexpected token "}"
+Location: /private/var/folders/gaffer/job/verify/tests/ParseErrorTest.php:4
+
+#0 /private/var/folders/gaffer/job/verify/vendor/phpunit/phpunit/src/TextUI/Configuration/TestSuiteBuilder.php(75): PHPUnit\TextUI\XmlConfiguration\TestSuiteMapper->map('/private/var/fo...', Object(PHPUnit\TextUI\Configuration\TestSuiteCollection), '', '')
+#1 {main}

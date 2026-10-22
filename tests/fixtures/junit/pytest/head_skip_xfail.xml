@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Synthetic (pytest's documented xunit2 shapes): a writer that skipped one tester test and xfailed another (R7). Also a class-based test and a teardown error. -->
+<testsuites name="pytest tests"><testsuite name="pytest" errors="1" failures="0" skipped="2" tests="5" time="0.021" timestamp="2026-10-21T22:30:00.000000+01:00" hostname="marks-mac"><testcase classname="tests.test_shout" name="test_shout_strips_surrounding_whitespace" time="0.000"><skipped type="pytest.skip" message="flaky on CI">/private/var/folders/gaffer/job/verify/tests/test_shout.py:4: flaky on CI</skipped></testcase><testcase classname="tests.test_shout" name="test_shout_uppercases_inner_text" time="0.000" /><testcase classname="tests.test_word_count" name="test_word_count_counts_whitespace_separated_words" time="0.000"><skipped type="pytest.xfail" message="known issue" /></testcase><testcase classname="tests.test_word_count.TestEdgeCases" name="test_tabs[\t]" time="0.000" /><testcase classname="tests.test_strings" name="test_shout_uppercases" time="0.000"><error message="failed on teardown with &quot;RuntimeError: leaked tmpdir&quot;">def cleanup():
+&gt;       raise RuntimeError("leaked tmpdir")
+E       RuntimeError: leaked tmpdir
+
+tests/conftest.py:9: RuntimeError</error></testcase></testsuite></testsuites>
