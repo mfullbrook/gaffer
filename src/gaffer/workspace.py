@@ -131,9 +131,9 @@ SAFE_GIT_CONFIG = (
 # R28: the writer can't use `git -c`, so the identity goes in the clone's config.
 GIT_USER_NAME = "gaffer"
 GIT_USER_EMAIL = "gaffer@gaffer.invalid"
-# R21 says objects are hardlinked; see the report (a hardlinked object file is
-# writable through the job dir). Kept per the ledger.
-CLONE_HARDLINKS = True
+# R31: never hardlink objects; a hardlinked object file is writable through
+# the job dir, so a writer could rewrite objects in Mark's checkout.
+CLONE_HARDLINKS = False
 
 _FULL_SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 _SHORT_SHA = re.compile(r"[0-9a-f]{7,64}")

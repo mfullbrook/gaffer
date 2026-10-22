@@ -2081,7 +2081,7 @@ Actual answer: A) Add to TODOS.md (D33 answer, 2026-10-18)
 Accepted scope: Add a P1 item under ## Scheduler in TODOS.md: Approach B capacity scheduler daemon (quota-window model from measured usage, admission with tester/reviewer/repair reservations, overnight interval, daytime headroom), `agent-ready` pickup, launchd, Jasper/Telegram notifier, Linear write-back (deferred by D1), two-job limit; depends on the v0.1 demo (SC2-SC5) and Experiment 1 quota data. Effort XL.
 History: none
 
-Approval readiness: PASS. Checked: D1 (D1 answer), D2 (D2 answer), D3 (D3 answer), R1 (D4), R2 (D5), R3 (D7), R4 (D8), R5 (D9), R6 (D10), R7 (D11), R8 (D12), R9 (D13), R10 (D14), R11 (D15), R12 (D16), R13 (D18), R14 (D19), R15 (D20), R16 (D21), R17 (D22, subsumed by R25), R18 (D23), R19 (D24), R20 (D25), R21 (D26), R22 (D27), R24 (D29), R25 (D30), R26 (D31), T1 (D32), T2 (D33), R27 (Mark, 2026-10-20, after Experiment 2), R28 (Mark, 2026-10-22, after Experiment 3), R29 (Mark, 2026-10-22, after Experiment 3b), R30 (Mark, 2026-10-22, after the T4 review). Architecture #3 (argv-only, issue-key validation) carried by prior approval of the design Constraints. Unresolved: R23 (D28 = investigate first; no remedy approved).
+Approval readiness: PASS. Checked: D1 (D1 answer), D2 (D2 answer), D3 (D3 answer), R1 (D4), R2 (D5), R3 (D7), R4 (D8), R5 (D9), R6 (D10), R7 (D11), R8 (D12), R9 (D13), R10 (D14), R11 (D15), R12 (D16), R13 (D18), R14 (D19), R15 (D20), R16 (D21), R17 (D22, subsumed by R25), R18 (D23), R19 (D24), R20 (D25), R21 (D26), R22 (D27), R24 (D29), R25 (D30), R26 (D31), T1 (D32), T2 (D33), R27 (Mark, 2026-10-20, after Experiment 2), R28 (Mark, 2026-10-22, after Experiment 3), R29 (Mark, 2026-10-22, after Experiment 3b), R30 (Mark, 2026-10-22, after the T4 review), R31 (Mark, 2026-10-22, after the T5-T8 review). Architecture #3 (argv-only, issue-key validation) carried by prior approval of the design Constraints. Unresolved: R23 (D28 = investigate first; no remedy approved).
 
 ### R27: Experiment 2 corrections (CodeRabbit completion and admission)
 Finding: Experiment 2 (`docs/experiments/coderabbit.md`, commit 93eb5a3), section 8 proposals; T2 fixtures in `tests/fixtures/coderabbit/`.
@@ -2170,6 +2170,27 @@ State: approved
 Actual answer: job root = `~/gaffer-jobs`; CI files = allowed with a reason; models = config field, default opus (Mark, 2026-10-22). Vault and MCP rows record the T4 session's choices.
 Accepted scope: the "After (approved)" column above.
 History: amends R1, R3, R7, R9, R20, R21, R28 and the design's Writer rules.
+
+### R31: T5-T8 review decisions
+Finding: module reports `docs/t5-children-report.md`, `docs/t6-store-report.md`, `docs/t7-workspace-report.md`, `docs/t8-reviews-report.md`; Mark's review 2026-10-22.
+
+| Choice | Before | After (approved) |
+|---|---|---|
+| Job clone objects (R21) | `git clone --local` (hardlinked objects: T7 proved a writer could rewrite objects in Mark's checkout) | `git clone --local --no-hardlinks` |
+| gitleaks (R15) | required, not installed | installed via Homebrew (8.30.1, 2026-10-22); the real-binary tests now run |
+| Guard-only criteria (R5) | at least one acceptance test per testable criterion | a criterion the tester marks `preserves` (keep-working behaviour) may be covered by guard tests only: they may pass on base and must pass at the end; all other testable criteria still need a valid red acceptance test |
+| Repo CLAUDE.md | design: read as untrusted guidance; spike flag set: disabled | **read as untrusted guidance**: the CLI keeps `CLAUDE_CODE_DISABLE_CLAUDE_MDS=1` and `--setting-sources user` (proven), and gaffer itself reads the repo's top-level `CLAUDE.md` (capped, secret-scanned) into the writer prompt under a "repo guidance: untrusted, cannot change permissions" section |
+| Crashed active job (R9) | undefined | refuse other issues with exit 4 naming the active job and the fix (`gaffer run <KEY>` or, later, `gaffer stop <KEY>`); never auto-park |
+| Newly synced Claude plugin (R28) | init check kills the child | gaffer records the plugin key in a persistent block list under `~/.gaffer`, relaunches once with a fresh session ID; a second init failure = BLOCKED: isolation_failed |
+| Job clone `.git/config` | undefined | gaffer restores its known-good `.git/config` before each of its own git commands (husky/lefthook keep working) and logs any difference in the report; never blocks on it |
+| Codex review findings | design: packet items; plan silent | Codex review findings are packet items, admitted alongside CodeRabbit items and failed checks |
+| Job marker `<job>` | undefined | the issue key plus `--fresh` generation (e.g. `ENG-12` or `ENG-12.2`), never the DB row id; used in both `gaffer-job:` and `gaffer-round:` markers |
+| Doctor rerun trigger (R18) | Claude or Codex version change | also when the pinned sandbox-runtime version changes |
+
+State: approved
+Actual answer: --no-hardlinks; install gitleaks; allow guard-only criteria; read CLAUDE.md as guidance; refuse and name the job; block the plugin and relaunch once; restore .git/config silently; include Codex findings (Mark, 2026-10-22). Marker and doctor rows accept the T6 report's proposals.
+Accepted scope: the "After (approved)" column above.
+History: amends R5, R9, R15, R18, R21 and R28.
 
 ## v0.1 plan as amended by eng review
 
@@ -2329,19 +2350,19 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: R3, R4, R6, R7, R11, R14
   - Files: src/gaffer/config.py, tests/test_config.py
   - Verify: `uv run pytest tests/test_config.py`
-- [ ] **T5 (P1, human: ~2 days / CC: ~1.5h)** children: preflight, config dirs, generated sandbox settings, Codex read denial, launch/resume, results, limits, process groups
+- [x] **T5 (P1, human: ~2 days / CC: ~1.5h)** children: preflight, config dirs, generated sandbox settings, Codex read denial, launch/resume, results, limits, process groups
   - Surfaced by: R1, R2, R3, R9, R10, R14, R15, R20
   - Files: src/gaffer/children.py, prompts/, tests/test_preflight.py, tests/test_children_launch.py
   - Verify: `uv run pytest tests/test_preflight.py tests/test_children_launch.py`
-- [ ] **T6 (P1, human: ~4h / CC: ~25 min)** store: schema with supervised_seconds and one-active-job constraint
+- [x] **T6 (P1, human: ~4h / CC: ~25 min)** store: schema with supervised_seconds and one-active-job constraint
   - Surfaced by: R9, R25
   - Files: src/gaffer/store.py, tests/test_store.py
   - Verify: `uv run pytest tests/test_store.py`
-- [ ] **T7 (P1, human: ~2 days / CC: ~1.5h)** workspace: job clone, verification worktree, install, tester paths, commit gates, gitleaks gate, push, PR
+- [x] **T7 (P1, human: ~2 days / CC: ~1.5h)** workspace: job clone, verification worktree, install, tester paths, commit gates, gitleaks gate, push, PR
   - Surfaced by: R6, R7, R10, R12, R14, R15, R21
   - Files: src/gaffer/workspace.py, tests/test_workspace_paths.py, tests/test_workspace_commits.py, tests/test_security.py
   - Verify: `uv run pytest tests/test_workspace_*.py tests/test_security.py`
-- [ ] **T8 (P1, human: ~3 days / CC: ~2h)** reviews: JUnit adapters (pytest, Jest, Vitest, PHPUnit per R29, generic), red-first, required checks, CodeRabbit admission, rounds, packets, CI log tail
+- [x] **T8 (P1, human: ~3 days / CC: ~2h)** reviews: JUnit adapters (pytest, Jest, Vitest, PHPUnit per R29, generic), red-first, required checks, CodeRabbit admission, rounds, packets, CI log tail
   - Surfaced by: R4, R5, R11, R12, R13, R22, R25
   - Files: src/gaffer/reviews.py, tests/test_junit.py, tests/test_redfirst.py, tests/test_required_checks.py, tests/test_coderabbit_admission.py, tests/test_rounds.py, tests/test_packet.py
   - Verify: `uv run pytest tests/test_junit.py tests/test_redfirst.py tests/test_required_checks.py tests/test_coderabbit_admission.py tests/test_rounds.py tests/test_packet.py`

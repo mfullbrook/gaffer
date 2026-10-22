@@ -210,3 +210,11 @@ def test_commit_tester_files_refuses_when_head_is_not_base(job):
     written = write_files(job, {"tests/test_more.py": "x\n"})
     with pytest.raises(WorkspaceError, match="must sit on the base"):
         commit_tester_files(job.ws, written, "tester")
+
+
+def test_job_clone_shares_no_object_files_with_the_source(job):
+    """R31: --no-hardlinks, so nothing in the job dir aliases Mark's checkout."""
+    src_inodes = {p.stat().st_ino for p in (job.src / ".git" / "objects").rglob("*") if p.is_file()}
+    clone_inodes = {p.stat().st_ino for p in (job.clone / ".git" / "objects").rglob("*") if p.is_file()}
+    assert src_inodes and clone_inodes
+    assert not src_inodes & clone_inodes
