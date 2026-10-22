@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic: go-junit-report style. Failures carry no type attribute. -->
+<testsuites tests="4" failures="2">
+	<testsuite name="example.com/toy/strings" tests="4" failures="2" errors="0" id="0" hostname="marks-mac" time="0.004" timestamp="2026-10-22T09:00:00Z">
+		<testcase name="TestShoutTrims" classname="example.com/toy/strings" time="0.000">
+			<failure message="Failed"><![CDATA[    strings_test.go:9: got " HELLO ", want "HELLO"]]></failure>
+		</testcase>
+		<testcase name="TestWordCount" classname="example.com/toy/strings" time="0.000">
+			<failure message="Failed"><![CDATA[panic: runtime error: invalid memory address or nil pointer dereference [recovered]
+	panic: runtime error: invalid memory address or nil pointer dereference]]></failure>
+		</testcase>
+		<testcase name="TestShoutUpper" classname="example.com/toy/strings" time="0.000"></testcase>
+		<testcase name="TestFlaky" classname="example.com/toy/strings" time="0.000">
+			<skipped message="flaky"></skipped>
+		</testcase>
+	</testsuite>
+</testsuites>

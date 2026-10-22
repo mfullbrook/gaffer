@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- UNVERIFIED: written from Vitest's documented junit reporter (vitest run with reporter=junit), never produced by a real run.
+     classname = file path relative to root; name = "describe > test"; failure type = error name;
+     a file that fails to load is a single testcase named by the file path. -->
+<testsuites name="vitest tests" tests="6" failures="4" errors="0" time="0.412">
+    <testsuite name="src/__tests__/shout.test.ts" timestamp="2026-10-22T09:00:00.000Z" hostname="marks-mac" tests="3" failures="1" errors="0" skipped="1" time="0.011">
+        <testcase classname="src/__tests__/shout.test.ts" name="shout &gt; trims surrounding whitespace before upper-casing" time="0.004">
+            <failure message="expected &apos; \tHELLO WORLD\n &apos; to be &apos;HELLO WORLD&apos; // Object.is equality" type="AssertionError">
+AssertionError: expected &apos; \tHELLO WORLD\n &apos; to be &apos;HELLO WORLD&apos; // Object.is equality
+
+- Expected
++ Received
+
+- HELLO WORLD
++ 	HELLO WORLD
+
+ ❯ src/__tests__/shout.test.ts:5:40
+            </failure>
+        </testcase>
+        <testcase classname="src/__tests__/shout.test.ts" name="shout &gt; upper-cases inner text" time="0.001">
+        </testcase>
+        <testcase classname="src/__tests__/shout.test.ts" name="shout &gt; keeps emoji" time="0">
+            <skipped/>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/__tests__/wordCount.test.ts" timestamp="2026-10-22T09:00:00.000Z" hostname="marks-mac" tests="2" failures="2" errors="0" skipped="0" time="0.006">
+        <testcase classname="src/__tests__/wordCount.test.ts" name="wordCount &gt; counts words" time="0.002">
+            <failure message="wordCount is not a function" type="TypeError">
+TypeError: wordCount is not a function
+ ❯ src/__tests__/wordCount.test.ts:5:12
+            </failure>
+        </testcase>
+        <testcase classname="src/__tests__/wordCount.test.ts" name="wordCount &gt; typo" time="0.001">
+            <failure message="shuot is not defined" type="ReferenceError">
+ReferenceError: shuot is not defined
+ ❯ src/__tests__/wordCount.test.ts:9:5
+            </failure>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/__tests__/slug.test.ts" timestamp="2026-10-22T09:00:00.000Z" hostname="marks-mac" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="src/__tests__/slug.test.ts" name="src/__tests__/slug.test.ts" time="0">
+            <failure message="Failed to load url ../slugify (resolved id: ../slugify) in /private/var/folders/gaffer/job/verify/src/__tests__/slug.test.ts. Does the file exist?" type="Error">
+Error: Failed to load url ../slugify (resolved id: ../slugify) in /private/var/folders/gaffer/job/verify/src/__tests__/slug.test.ts. Does the file exist?
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:51969:17
+            </failure>
+        </testcase>
+    </testsuite>
+</testsuites>

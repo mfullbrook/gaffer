@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Reconstructed from spike/evidence/d_py_typo.json: shout( -> shuot( seeded into one acceptance test. -->
+<testsuites name="pytest tests"><testsuite name="pytest" errors="1" failures="1" skipped="0" tests="4" time="0.030" timestamp="2026-10-21T21:15:40.902114+01:00" hostname="marks-mac"><testcase classname="" name="tests.test_word_count" time="0.000"><error message="collection failure">ImportError while importing test module '/private/var/folders/gaffer/job/verify/tests/test_word_count.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/test_word_count.py:1: in &lt;module&gt;
+    from toy.strings import word_count
+E   ImportError: cannot import name 'word_count' from 'toy.strings' (/private/var/folders/gaffer/job/verify/toy/strings.py)</error></testcase><testcase classname="tests.test_shout" name="test_shout_strips_surrounding_whitespace" time="0.001"><failure message="NameError: name 'shuot' is not defined">def test_shout_strips_surrounding_whitespace():
+&gt;       assert shuot(" \tHello world\n ") == "HELLO WORLD"
+               ^^^^^
+E       NameError: name 'shuot' is not defined
+
+tests/test_shout.py:5: NameError</failure></testcase><testcase classname="tests.test_shout" name="test_shout_uppercases_inner_text" time="0.000" /><testcase classname="tests.test_strings" name="test_shout_uppercases" time="0.000" /></testsuite></testsuites>

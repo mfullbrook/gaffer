@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Reconstructed from spike/evidence/d_js_typo.json: shout( -> shuot( seeded into one acceptance test. -->
+<testsuites name="jest tests" tests="5" failures="3" errors="0" time="0.155">
+  <testsuite name="wordCount" errors="0" failures="2" skipped="0" timestamp="2026-10-21T20:24:51" time="0.06" tests="2">
+    <testcase classname="__tests__/wordCount.test.js" name="wordCount counts words separated by mixed whitespace" time="0.001" file="__tests__/wordCount.test.js">
+      <failure>TypeError: wordCount is not a function
+    at Object.wordCount (/private/var/folders/gaffer/job/verify/__tests__/wordCount.test.js:5:12)</failure>
+    </testcase>
+    <testcase classname="__tests__/wordCount.test.js" name="wordCount returns zero for empty and whitespace-only text" time="0" file="__tests__/wordCount.test.js">
+      <failure>TypeError: wordCount is not a function
+    at Object.wordCount (/private/var/folders/gaffer/job/verify/__tests__/wordCount.test.js:10:12)</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="shout" errors="0" failures="1" skipped="0" timestamp="2026-10-21T20:24:51" time="0.05" tests="2">
+    <testcase classname="__tests__/shout.test.js" name="shout trims surrounding whitespace before upper-casing" time="0.001" file="__tests__/shout.test.js">
+      <failure>ReferenceError: shuot is not defined
+    at Object.expect (/private/var/folders/gaffer/job/verify/__tests__/shout.test.js:5:5)
+    at Promise.finally.completed (/private/var/folders/gaffer/job/repo/node_modules/jest-circus/build/jestAdapterInit.js:1834:28)</failure>
+    </testcase>
+    <testcase classname="__tests__/shout.test.js" name="shout upper-cases inner text while preserving inner whitespace" time="0" file="__tests__/shout.test.js">
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2026-10-21T20:24:51" time="0.04" tests="1">
+    <testcase classname="__tests__/strings.test.js" name=" shout uppercases" time="0" file="__tests__/strings.test.js">
+    </testcase>
+  </testsuite>
+</testsuites>
