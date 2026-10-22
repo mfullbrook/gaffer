@@ -2081,7 +2081,7 @@ Actual answer: A) Add to TODOS.md (D33 answer, 2026-10-18)
 Accepted scope: Add a P1 item under ## Scheduler in TODOS.md: Approach B capacity scheduler daemon (quota-window model from measured usage, admission with tester/reviewer/repair reservations, overnight interval, daytime headroom), `agent-ready` pickup, launchd, Jasper/Telegram notifier, Linear write-back (deferred by D1), two-job limit; depends on the v0.1 demo (SC2-SC5) and Experiment 1 quota data. Effort XL.
 History: none
 
-Approval readiness: PASS. Checked: D1 (D1 answer), D2 (D2 answer), D3 (D3 answer), R1 (D4), R2 (D5), R3 (D7), R4 (D8), R5 (D9), R6 (D10), R7 (D11), R8 (D12), R9 (D13), R10 (D14), R11 (D15), R12 (D16), R13 (D18), R14 (D19), R15 (D20), R16 (D21), R17 (D22, subsumed by R25), R18 (D23), R19 (D24), R20 (D25), R21 (D26), R22 (D27), R24 (D29), R25 (D30), R26 (D31), T1 (D32), T2 (D33), R27 (Mark, 2026-10-20, after Experiment 2), R28 (Mark, 2026-10-22, after Experiment 3), R29 (Mark, 2026-10-22, after Experiment 3b), R30 (Mark, 2026-10-22, after the T4 review), R31 (Mark, 2026-10-22, after the T5-T8 review). Architecture #3 (argv-only, issue-key validation) carried by prior approval of the design Constraints. Unresolved: R23 (D28 = investigate first; no remedy approved).
+Approval readiness: PASS. Checked: D1 (D1 answer), D2 (D2 answer), D3 (D3 answer), R1 (D4), R2 (D5), R3 (D7), R4 (D8), R5 (D9), R6 (D10), R7 (D11), R8 (D12), R9 (D13), R10 (D14), R11 (D15), R12 (D16), R13 (D18), R14 (D19), R15 (D20), R16 (D21), R17 (D22, subsumed by R25), R18 (D23), R19 (D24), R20 (D25), R21 (D26), R22 (D27), R24 (D29), R25 (D30), R26 (D31), T1 (D32), T2 (D33), R27 (Mark, 2026-10-20, after Experiment 2), R28 (Mark, 2026-10-22, after Experiment 3), R29 (Mark, 2026-10-22, after Experiment 3b), R30 (Mark, 2026-10-22, after the T4 review), R31 (Mark, 2026-10-22, after the T5-T8 review), R32 (Mark, 2026-10-22, after the R31 and T9 review). Architecture #3 (argv-only, issue-key validation) carried by prior approval of the design Constraints. Unresolved: R23 (D28 = investigate first; no remedy approved).
 
 ### R27: Experiment 2 corrections (CodeRabbit completion and admission)
 Finding: Experiment 2 (`docs/experiments/coderabbit.md`, commit 93eb5a3), section 8 proposals; T2 fixtures in `tests/fixtures/coderabbit/`.
@@ -2191,6 +2191,21 @@ State: approved
 Actual answer: --no-hardlinks; install gitleaks; allow guard-only criteria; read CLAUDE.md as guidance; refuse and name the job; block the plugin and relaunch once; restore .git/config silently; include Codex findings (Mark, 2026-10-22). Marker and doctor rows accept the T6 report's proposals.
 Accepted scope: the "After (approved)" column above.
 History: amends R5, R9, R15, R18, R21 and R28.
+
+### R32: R31 follow-up and T9 review decisions
+Finding: `docs/r31-amendments-report.md` and `docs/t9-runner-report.md`; Mark's review 2026-10-22.
+
+| Choice | Before | After (approved) |
+|---|---|---|
+| Guard test failing on base | non-blocking | invalid: retry the tester once with the failure attached, then BLOCKED: tester_invalid (a guard must prove existing behaviour works) |
+| Codex "unjustified" harness judgement (R7) | report only | a packet item (source "codex"), so the writer reverts or justifies the change in the next resume, using a repair cycle |
+| Repo guidance files (R31) | top-level `CLAUDE.md`; scanner error stops the job | top-level `CLAUDE.md` and `AGENTS.md`, each capped at 16 KB and secret-scanned; a scanner error drops the guidance, notes it in the report and continues |
+| T9 integration | runner built on pre-R31 interfaces | merge r31-amendments into the runner and adopt the new interfaces (item-key helpers, `codex_reviews=`, guidance read once after the tester commit, `plugins_only` relaunch via `record_blocked_plugins`, `TesterResult.preserves`, `srt_version`) |
+
+State: approved
+Actual answer: reject failing guards; harness verdict is a packet item; CLAUDE.md + AGENTS.md, drop on error; merge and follow up (Mark, 2026-10-22).
+Accepted scope: the "After (approved)" column above.
+History: amends R5, R7 and R31.
 
 ## v0.1 plan as amended by eng review
 
