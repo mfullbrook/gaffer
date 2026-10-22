@@ -1392,7 +1392,7 @@ Writer Bash network allowlist stays empty; gaffer runs per-repo install_command 
 
 State: approved
 Actual answer: A) Registry hosts allowlisted (D19 answer, 2026-10-09)
-Accepted scope: Writer Bash sandbox network.allowedDomains = per-ecosystem registry hosts from gaffer.toml (python: pypi.org, files.pythonhosted.org; node: registry.npmjs.org; php: repo.packagist.org, packagist.org) plus per-repo extra_hosts, no GitHub hosts; gaffer runs per-repo install_command in job and verification worktrees under a sandbox limited to the same hosts; gaffer's test runs stay network-off; writer may add dependencies, with manifest and lockfile changes needing the R7 trailer and a Codex judgement; Context7 via R3 allowed_mcp. Supersedes R1's "network allowlist empty" for the writer's Bash sandbox; all other R1 scope unchanged. *Amended by R28: install_command uses sandbox-runtime; PHP/Composer proof (Experiment 3b) pending; pip via uv.*
+Accepted scope: Writer Bash sandbox network.allowedDomains = per-ecosystem registry hosts from gaffer.toml (python: pypi.org, files.pythonhosted.org; node: registry.npmjs.org; php: repo.packagist.org, packagist.org) plus per-repo extra_hosts, no GitHub hosts; gaffer runs per-repo install_command in job and verification worktrees under a sandbox limited to the same hosts; gaffer's test runs stay network-off; writer may add dependencies, with manifest and lockfile changes needing the R7 trailer and a Codex judgement; Context7 via R3 allowed_mcp. Supersedes R1's "network allowlist empty" for the writer's Bash sandbox; all other R1 scope unchanged. *Amended by R28: install_command uses sandbox-runtime; PHP/Composer proof (Experiment 3b) pending; pip via uv.* *Amended by R29: PHP repos also allow api.github.com + codeload.github.com.*
 History: none
 
 ### R15: Secret scanner
@@ -1771,7 +1771,7 @@ v0.1 keeps R4 as approved; test identity inventory and runner adapters become a 
 
 State: approved
 Actual answer: A) Apply: inventory + adapters (D27 answer, 2026-10-13)
-Accepted scope: The tester's criterion map lists every expected test identity (file + JUnit classname/name); each must appear in JUnit results, missing = failed (R7); for red-first, a file-level collection error naming an expected_missing symbol makes that file's acceptance tests valid red; v0.1 ships fixture-tested JUnit adapters for pytest, Jest and Vitest; other runners only with `runner = "generic"`, where the report states xfail detection is unavailable. Supersedes R4's "tester tests are testcases in files the tester created". *Amended by R28: pytest and Jest adapter flags and failure shapes.*
+Accepted scope: The tester's criterion map lists every expected test identity (file + JUnit classname/name); each must appear in JUnit results, missing = failed (R7); for red-first, a file-level collection error naming an expected_missing symbol makes that file's acceptance tests valid red; v0.1 ships fixture-tested JUnit adapters for pytest, Jest and Vitest; other runners only with `runner = "generic"`, where the report states xfail detection is unavailable. Supersedes R4's "tester tests are testcases in files the tester created". *Amended by R28: pytest and Jest adapter flags and failure shapes.* *Amended by R29: PHPUnit adapter added.*
 History: none
 
 ### R23: Evidence that survives lost state
@@ -2081,7 +2081,7 @@ Actual answer: A) Add to TODOS.md (D33 answer, 2026-10-18)
 Accepted scope: Add a P1 item under ## Scheduler in TODOS.md: Approach B capacity scheduler daemon (quota-window model from measured usage, admission with tester/reviewer/repair reservations, overnight interval, daytime headroom), `agent-ready` pickup, launchd, Jasper/Telegram notifier, Linear write-back (deferred by D1), two-job limit; depends on the v0.1 demo (SC2-SC5) and Experiment 1 quota data. Effort XL.
 History: none
 
-Approval readiness: PASS. Checked: D1 (D1 answer), D2 (D2 answer), D3 (D3 answer), R1 (D4), R2 (D5), R3 (D7), R4 (D8), R5 (D9), R6 (D10), R7 (D11), R8 (D12), R9 (D13), R10 (D14), R11 (D15), R12 (D16), R13 (D18), R14 (D19), R15 (D20), R16 (D21), R17 (D22, subsumed by R25), R18 (D23), R19 (D24), R20 (D25), R21 (D26), R22 (D27), R24 (D29), R25 (D30), R26 (D31), T1 (D32), T2 (D33), R27 (Mark, 2026-10-20, after Experiment 2), R28 (Mark, 2026-10-22, after Experiment 3). Architecture #3 (argv-only, issue-key validation) carried by prior approval of the design Constraints. Unresolved: R23 (D28 = investigate first; no remedy approved).
+Approval readiness: PASS. Checked: D1 (D1 answer), D2 (D2 answer), D3 (D3 answer), R1 (D4), R2 (D5), R3 (D7), R4 (D8), R5 (D9), R6 (D10), R7 (D11), R8 (D12), R9 (D13), R10 (D14), R11 (D15), R12 (D16), R13 (D18), R14 (D19), R15 (D20), R16 (D21), R17 (D22, subsumed by R25), R18 (D23), R19 (D24), R20 (D25), R21 (D26), R22 (D27), R24 (D29), R25 (D30), R26 (D31), T1 (D32), T2 (D33), R27 (Mark, 2026-10-20, after Experiment 2), R28 (Mark, 2026-10-22, after Experiment 3), R29 (Mark, 2026-10-22, after Experiment 3b). Architecture #3 (argv-only, issue-key validation) carried by prior approval of the design Constraints. Unresolved: R23 (D28 = investigate first; no remedy approved).
 
 ### R27: Experiment 2 corrections (CodeRabbit completion and admission)
 Finding: Experiment 2 (`docs/experiments/coderabbit.md`, commit 93eb5a3), section 8 proposals; T2 fixtures in `tests/fixtures/coderabbit/`.
@@ -2133,6 +2133,26 @@ State: approved
 Actual answer: Claude skills = accept synced skills, block plugins; installs = sandbox-runtime; Codex `~/.agents` skills acceptable; PHP must be proven (Mark, 2026-10-22). All other rows fold in the spike's findings as recorded.
 Accepted scope: the "After (approved)" column above.
 History: amends R1, R3, R5, R9, R14, R18, R20, R21 and R22; adds Experiment 3b to the build order.
+
+### R29: Experiment 3b corrections and decision (PHP)
+Finding: Experiment 3b (`docs/spike-results.md` section "3b: PHP", commit 046c58a); Mark's review 2026-10-22.
+Plan baseline: R14 php hosts `repo.packagist.org`, `packagist.org`, no GitHub hosts; R28 deny list; R22 adapters for pytest, Jest and Vitest.
+Runtime evidence: Herd PHP 8.4.22 and Composer 2.10.1 work under the writer sandbox and sandbox-runtime 0.0.79. With Packagist hosts only, `composer install` fails (exit 100): every dist archive is `api.github.com/repos/<o>/<r>/zipball/<sha>` → 302 → `codeload.github.com`. The minimal working set from a lockfile is `api.github.com` + `codeload.github.com`; `repo.packagist.org` is needed for `require`/`update`. `github.com` (git) is never needed. Allowing `api.github.com` opens every path and method on it.
+
+| Choice | Before | After (approved) |
+|---|---|---|
+| PHP hosts (R14) | repo.packagist.org, packagist.org; no GitHub hosts | for repos with `php` in gaffer.toml only: `repo.packagist.org`, `packagist.org`, **`api.github.com`, `codeload.github.com`**, for both the writer sandbox and install_command; `github.com` stays blocked; other ecosystems unchanged. Accepted risk: sandboxed code can reach the whole GitHub REST API (same class as npm/PyPI publish with an outside token); gitleaks (R15) still scans every push and comment; the report lists the GitHub hosts as open (Mark, 2026-10-22) |
+| Deny list (R1, R20) | R28 list | adds `~/.composer`, `~/.config/composer` (Composer `auth.json`) and `~/Library/Application Support/Herd/config/valet` (Herd's system-trusted CA private key) |
+| File-tool Read rules (R1) | `Read(//<path>/**)` per deny entry | single files (`~/.claude.json`) need exact-path rules as well as directory globs; doctor (R18) probes file-tool reads of each |
+| PHP launch env (R14) | env allowlist | prepend `~/Library/Application Support/Herd/bin` to PATH for `claude`, `srt` and `codex sandbox` (path has a space); `COMPOSER_HOME=<job>/composer-home`, `COMPOSER_CACHE_DIR=<job>/composer-home/cache`, `COMPOSER_NO_INTERACTION=1`; Herd ini scan dir left unset (Composer's bundled CA works) |
+| sandbox-runtime launch (R28) | srt | pinned 0.0.79 in `~/.gaffer/tools/sandbox-runtime`; `srt` keeps the short system `TMPDIR` (104-byte socket path limit) and the wrapped command sets `TMPDIR=<job>/tmp`; no `/dev/fd` process substitution inside srt |
+| Verification worktrees (R4) | shared deps | PHP: each worktree runs its own `composer install`, offline from the job's warm cache (a symlinked `vendor/` loads the wrong `src/`) |
+| PHPUnit adapter (R22) | not supported | add a PHPUnit adapter: `--log-junit`, `--do-not-cache-result`, one run per test file so a file-level fatal (no JUnit file, exit 255) loses only that file; parse its `Message:`/`Location:` lines as a collection error (valid red only if it names an `expected_missing` symbol); assertion type is `PHPUnit\Framework\ExpectationFailedException`; `<skipped/>` (skipped and incomplete) counts as failed (R7) |
+
+State: approved
+Actual answer: A) Allow api.github.com + codeload.github.com for PHP repos (Mark, 2026-10-22). Other rows fold in the 3b findings.
+Accepted scope: the "After (approved)" column above.
+History: amends R1, R4, R14, R20, R22 and R28; closes Experiment 3b.
 
 ## v0.1 plan as amended by eng review
 
@@ -2203,7 +2223,7 @@ READY (0) · BLOCKED (2) · CLOSED (3) → report.md; reruns: --adopt-head, --mo
 1. ~~Experiment 1~~ **Done** (`docs/experiments/billing.md`; billing pages re-read and overage confirmed off by Mark, 2026-10-20): billing route. Record CLI versions and login-status output, and re-read the API billing pages the next day (R2). Also measure how much of a Pro 5-hour window one tester + writer + reviewer job uses (Step 0A).
 2. ~~Experiment 2~~ **Done** (`docs/experiments/coderabbit.md`, fixtures in `tests/fixtures/coderabbit/`, corrections in R27): CodeRabbit fixtures. Confirm that CodeRabbit reviews ready-for-review PRs and derive the admission rules (R12).
 3. ~~Experiment 3~~ **Done** (`docs/spike-results.md`, corrections in R28): the vertical spike on two toy repos, one pytest and one Jest, written up in `docs/spike-results.md`. It must prove R2/R3 logins in gaffer's config dirs, R1/R14/R21 sandboxed commits in a job clone, R20 read denial for Codex children and test runs, R5/R22 red-first via JUnit, and R9 resume by pre-assigned ID. Any failure reopens its decision before module code starts.
-3b. Experiment 3b (R28): prove PHP installs (Composer via Herd) under the writer sandbox and under sandbox-runtime for install_command, and settle which hosts Composer needs.
+3b. ~~Experiment 3b~~ **Done** (`docs/spike-results.md` "3b: PHP", corrections in R29): prove PHP installs (Composer via Herd) under the writer sandbox and under sandbox-runtime for install_command, and settle which hosts Composer needs.
 4. Build `config.py`, then `store.py`, `children.py`, `workspace.py` and `reviews.py` in parallel, then `runner.py`.
 5. After the spike passes: doctor (R18), eval (R19) and lost-state reconstruction (R9; R23 still under investigation).
 6. Toy-repo demo (SC2), then one real RobinHQ ticket.
