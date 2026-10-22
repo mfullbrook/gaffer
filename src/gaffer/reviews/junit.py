@@ -600,9 +600,14 @@ class CriterionMap:
     tests: tuple[ExpectedTest, ...]
     expected_missing: tuple[str, ...] = ()
     testable_criteria: tuple[str, ...] = ()
+    # R5 as amended by R31: criteria the tester marked `preserves` (keep-working
+    # behaviour); guard tests alone may cover them.
+    preserving_criteria: tuple[str, ...] = ()
 
     @classmethod
     def from_tester_output(cls, data: dict) -> CriterionMap:
+        """Reads children.TESTER_SCHEMA's shape: untestable entries are
+        {criterion_id, reason} (a bare id or {id} is also accepted)."""
         tests = tuple(
             ExpectedTest(
                 criterion_id=str(t["criterion_id"]),
@@ -613,9 +618,17 @@ class CriterionMap:
             )
             for t in data.get("tests", ())
         )
-        untestable = {str(u["id"] if isinstance(u, dict) else u) for u in data.get("untestable", ())}
+        untestable = {
+            str(u.get("criterion_id", u.get("id")) if isinstance(u, dict) else u) for u in data.get("untestable", ())
+        }
         criteria = tuple(str(c["id"]) for c in data.get("criteria", ()) if str(c["id"]) not in untestable)
-        return cls(tests=tests, expected_missing=tuple(str(s) for s in data.get("expected_missing", ())), testable_criteria=criteria)
+        preserving = tuple(str(c["id"]) for c in data.get("criteria", ()) if c.get("preserves") is True)
+        return cls(
+            tests=tests,
+            expected_missing=tuple(str(s) for s in data.get("expected_missing", ())),
+            testable_criteria=criteria,
+            preserving_criteria=preserving,
+        )
 
 
 @dataclass(frozen=True)

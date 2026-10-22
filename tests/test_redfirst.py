@@ -15,8 +15,20 @@ from reviews_fakes import JUNIT
 ROOT = "/private/var/folders/gaffer/job/verify"
 
 
-def cmap_for(runner: str, **override) -> CriterionMap:
+def _tester_data(runner: str, preserves=("C3",)) -> dict:
+    """The spike's recorded tester output. It predates R31's per-criterion `preserves`
+    flag; C3 ("continues to upper-case inner text") is the keep-working criterion its
+    guard test covers, so by default C3 carries preserves: true as the tester now emits
+    it. preserves=None leaves the flag out (the raw recording)."""
     data = json.loads((JUNIT / runner / "tester.json").read_text())
+    if preserves is not None:
+        for c in data["criteria"]:
+            c["preserves"] = c["id"] in preserves
+    return data
+
+
+def cmap_for(runner: str, preserves=("C3",), **override) -> CriterionMap:
+    data = _tester_data(runner, preserves)
     data.update(override)
     return CriterionMap.from_tester_output(data)
 
@@ -32,15 +44,8 @@ def verdicts(result) -> dict[str, Verdict]:
 # --- spike proof D: pytest ------------------------------------------------------------
 
 
-def without_guard_only_criterion(runner: str) -> CriterionMap:
-    """The spike's tester covered C3 with a guard only; see test_guard_only_criterion_fails_coverage."""
-    data = json.loads((JUNIT / runner / "tester.json").read_text())
-    data["criteria"] = [c for c in data["criteria"] if c["id"] != "C3"]
-    return CriterionMap.from_tester_output(data)
-
-
 def test_pytest_clean_base_is_valid_red():
-    r = classify_red_first(without_guard_only_criterion("pytest"), run_of("pytest", "base_clean.xml"))
+    r = classify_red_first(cmap_for("pytest"), run_of("pytest", "base_clean.xml"))
     assert r.status is RedFirstStatus.OK
     assert verdicts(r) == {
         # collection-level ImportError names word_count (R22)
@@ -63,7 +68,7 @@ def test_pytest_typo_is_invalid_red_even_though_junit_says_failure():
 
 
 def test_jest_clean_base_is_valid_red():
-    r = classify_red_first(without_guard_only_criterion("jest"), run_of("jest", "base_clean.xml"))
+    r = classify_red_first(cmap_for("jest"), run_of("jest", "base_clean.xml"))
     assert r.status is RedFirstStatus.OK
     assert verdicts(r) == {
         "wordCount counts words separated by mixed whitespace": Verdict.VALID_MISSING_SYMBOL,
@@ -209,24 +214,73 @@ def test_identity_missing_from_junit_without_a_file_level_error_is_invalid():
 
 
 def test_every_testable_criterion_needs_an_acceptance_test():
-    data = json.loads((JUNIT / "pytest" / "tester.json").read_text())
-    data["criteria"] = [c for c in data["criteria"] if c["id"] != "C3"] + [{"id": "C4", "text": "shout handles None"}]
+    data = _tester_data("pytest")
+    data["criteria"].append({"id": "C4", "text": "shout handles None", "preserves": False})
     r = classify_red_first(CriterionMap.from_tester_output(data), run_of("pytest", "base_clean.xml"))
     assert r.status is RedFirstStatus.INVALID
-    assert r.problems == ("criterion C4 has no acceptance test (R5: at least one per testable criterion)",)
+    assert r.problems == ("criterion C4 has no acceptance test (R5: at least one per testable criterion not marked preserves)",)
     data["untestable"] = ["C4"]
+    assert classify_red_first(CriterionMap.from_tester_output(data), run_of("pytest", "base_clean.xml")).status is RedFirstStatus.OK
+    # children's shape: {criterion_id, reason}
+    data["untestable"] = [{"criterion_id": "C4", "reason": "needs a production service"}]
     assert classify_red_first(CriterionMap.from_tester_output(data), run_of("pytest", "base_clean.xml")).status is RedFirstStatus.OK
 
 
 @pytest.mark.parametrize("runner", ["pytest", "jest"])
-def test_guard_only_criterion_fails_coverage(runner):
-    """The spike's real tester output covers C3 ("continues to upper-case") with
-    a guard only. R5 as written needs an acceptance test per testable criterion,
-    so that output is tester_invalid. Flagged in docs/t8-reviews-report.md."""
-    r = classify_red_first(cmap_for(runner), run_of(runner, "base_clean.xml"))
+def test_recorded_guard_only_criterion_is_valid_when_marked_preserves(runner):
+    """R5 as amended by R31: the spike's real tester output covers C3 ("continues to
+    upper-case") with a guard only. Marked preserves, that is valid coverage; the guard
+    passes on base and must pass at the end."""
+    cmap = cmap_for(runner)
+    assert cmap.preserving_criteria == ("C3",) and "C3" in cmap.testable_criteria
+    r = classify_red_first(cmap, run_of(runner, "base_clean.xml"))
+    assert r.status is RedFirstStatus.OK and r.problems == ()
+    [c3] = [v for v in r.verdicts if v.test.criterion_id == "C3"]
+    assert c3.test.label is Label.GUARD and c3.verdict is Verdict.GUARD_PASSES
+
+
+@pytest.mark.parametrize("runner", ["pytest", "jest"])
+@pytest.mark.parametrize("preserves", [(), None], ids=["false", "absent"])
+def test_guard_only_criterion_not_marked_preserves_fails_coverage(runner, preserves):
+    r = classify_red_first(cmap_for(runner, preserves=preserves), run_of(runner, "base_clean.xml"))
     assert r.status is RedFirstStatus.INVALID
-    assert r.problems == ("criterion C3 has no acceptance test (R5: at least one per testable criterion)",)
+    assert r.problems == ("criterion C3 has no acceptance test (R5: at least one per testable criterion not marked preserves)",)
     assert not r.invalid  # every individual test verdict is fine
+
+
+def test_preserves_criterion_still_needs_a_test():
+    data = _tester_data("pytest")
+    data["tests"] = [t for t in data["tests"] if t["criterion_id"] != "C3"]
+    r = classify_red_first(CriterionMap.from_tester_output(data), run_of("pytest", "base_clean.xml"))
+    assert r.status is RedFirstStatus.INVALID
+    assert r.problems == ("criterion C3 (preserves) has no test (R5, R31: guard tests are enough, but one is needed)",)
+
+
+def test_preserves_does_not_cover_other_criteria():
+    # Marking C3 doesn't relax C2: with its acceptance test relabelled guard, C2 is uncovered.
+    data = _tester_data("pytest")
+    for t in data["tests"]:
+        if t["criterion_id"] == "C2":
+            t["label"] = "guard"
+    r = classify_red_first(CriterionMap.from_tester_output(data), run_of("pytest", "base_clean.xml"))
+    assert r.status is RedFirstStatus.INVALID
+    assert r.problems == ("criterion C2 has no acceptance test (R5: at least one per testable criterion not marked preserves)",)
+
+
+def test_guard_on_a_preserves_criterion_must_pass_at_the_end():
+    """'Must pass at the end' is the inventory gate: a failing guard is a failing test."""
+    from gaffer.reviews.junit import match_inventory
+    cmap = cmap_for("pytest")
+    inv = match_inventory(cmap, run_of("pytest", "head_pass.xml"))
+    [c3] = [e for e in inv.entries if e.test.criterion_id == "C3"]
+    assert c3.passed
+    broken = CriterionMap(
+        tuple(ExpectedTest(t.criterion_id, t.label, t.file, t.classname, t.name + "_gone") if t.criterion_id == "C3" else t
+              for t in cmap.tests),
+        cmap.expected_missing, cmap.testable_criteria, cmap.preserving_criteria,
+    )
+    inv = match_inventory(broken, run_of("pytest", "head_pass.xml"))
+    assert not inv.all_passed and [e.test.criterion_id for e in inv.failing] == ["C3"]
 
 
 def test_a_run_that_proves_nothing_is_run_failed():

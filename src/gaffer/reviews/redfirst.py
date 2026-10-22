@@ -10,6 +10,11 @@ On the base an acceptance test is a valid red when:
 Anything else is invalid: one retry with the errors attached, then BLOCKED:
 tester_invalid. An acceptance test passing on base is BLOCKED: already_passing.
 Guard tests may pass on base.
+
+Coverage (R5 as amended by R31): every testable criterion needs at least one
+acceptance test, except a criterion the tester marked `preserves`
+(keep-working behaviour), which may be covered by guard tests only: they may
+pass on base and must pass at the end (match_inventory gates that).
 """
 
 from __future__ import annotations
@@ -95,9 +100,14 @@ def classify_red_first(cmap: CriterionMap, base: RunResult) -> RedFirstResult:
     verdicts = tuple(_classify(t, base, cmap.expected_missing) for t in cmap.tests)
     problems = []
     covered = {t.criterion_id for t in cmap.tests if t.label is Label.ACCEPTANCE}
+    tested = {t.criterion_id for t in cmap.tests}
+    preserving = set(cmap.preserving_criteria)
     for crit in cmap.testable_criteria:
-        if crit not in covered:
-            problems.append(f"criterion {crit} has no acceptance test (R5: at least one per testable criterion)")
+        if crit in preserving:
+            if crit not in tested:
+                problems.append(f"criterion {crit} (preserves) has no test (R5, R31: guard tests are enough, but one is needed)")
+        elif crit not in covered:
+            problems.append(f"criterion {crit} has no acceptance test (R5: at least one per testable criterion not marked preserves)")
     if not cmap.tests:
         problems.append("the criterion map lists no tests")
 

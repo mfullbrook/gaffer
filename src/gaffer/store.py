@@ -439,6 +439,7 @@ class DoctorRun:
     ran_at: float
     passed: bool
     results: Any
+    srt_version: str | None = None  # R31; None for passes recorded before schema v2
 
 
 @dataclass(frozen=True)
@@ -710,9 +711,23 @@ CREATE TABLE events (
 ) STRICT;
 """
 
+# R31: doctor passes are also keyed on the pinned sandbox-runtime version, so a
+# changed srt pin triggers a rerun. Passes recorded before this migration have
+# srt_version NULL and never match a pinned version: the next run reruns doctor.
+SCHEMA_V2 = """
+ALTER TABLE doctor_runs ADD COLUMN srt_version TEXT;
+DROP INDEX doctor_runs_versions;
+CREATE INDEX doctor_runs_versions ON doctor_runs (claude_version, codex_version, srt_version, passed);
+"""
+
 # MIGRATIONS[i] takes the schema from user_version i to i + 1.
-MIGRATIONS: tuple[str, ...] = (SCHEMA_V1,)
+MIGRATIONS: tuple[str, ...] = (SCHEMA_V1, SCHEMA_V2)
 SCHEMA_VERSION = len(MIGRATIONS)
+
+
+def _check_srt_version(srt_version: str) -> None:
+    if not isinstance(srt_version, str) or not srt_version.strip():
+        raise ValueError("srt_version must be the pinned sandbox-runtime version, e.g. '0.0.79' (R31).")
 
 
 # --- store ----------------------------------------------------------------
@@ -1067,21 +1082,28 @@ class Store:
         rows = self._conn.execute("SELECT * FROM cli_evidence WHERE job_id = ? ORDER BY id", (job_id,))
         return [_from_row(CliEvidence, r) for r in rows]
 
-    def record_doctor_run(self, *, claude_version: str, codex_version: str, passed: bool, results: Any) -> DoctorRun:
+    def record_doctor_run(self, *, claude_version: str, codex_version: str, srt_version: str, passed: bool,
+                          results: Any) -> DoctorRun:
+        """srt_version: the pinned sandbox-runtime version doctor probed (children.SRT_VERSION)."""
+        _check_srt_version(srt_version)
         with self._tx("record_doctor_run") as conn:
             cur = conn.execute(
-                "INSERT INTO doctor_runs (claude_version, codex_version, ran_at, passed, results) VALUES (?, ?, ?, ?, ?)",
-                (claude_version, codex_version, self._now(), int(passed), canonical_json(results)),
+                "INSERT INTO doctor_runs (claude_version, codex_version, srt_version, ran_at, passed, results)"
+                " VALUES (?, ?, ?, ?, ?, ?)",
+                (claude_version, codex_version, srt_version, self._now(), int(passed), canonical_json(results)),
             )
         return _from_row(DoctorRun, self._one("SELECT * FROM doctor_runs WHERE id = ?", (cur.lastrowid,)))
 
     def last_doctor_pass(self) -> DoctorRun | None:
         return _from_row(DoctorRun, self._one("SELECT * FROM doctor_runs WHERE passed = 1 ORDER BY id DESC LIMIT 1"))
 
-    def doctor_needed(self, claude_version: str, codex_version: str) -> bool:
-        """R18: run doctor when either version differs from the last pass."""
+    def doctor_needed(self, claude_version: str, codex_version: str, *, srt_version: str) -> bool:
+        """R18 as amended by R31: run doctor when the Claude or Codex version, or the
+        pinned sandbox-runtime version, differs from the last pass."""
+        _check_srt_version(srt_version)
         last = self.last_doctor_pass()
-        return last is None or (last.claude_version, last.codex_version) != (claude_version, codex_version)
+        return last is None or (last.claude_version, last.codex_version, last.srt_version) != (
+            claude_version, codex_version, srt_version)
 
     # -- attempts and leases (R9) --
 

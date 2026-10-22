@@ -288,3 +288,16 @@ def test_allowed_mcp_needs_a_definition(home, paths, fakes):
         preflight(cfg, repo, paths=paths, environ=CLEAN_ENV)
     paths.mcp_config.write_text(json.dumps({"mcpServers": {"context7": {"type": "http", "url": "https://mcp.context7.com/mcp"}}}))
     assert preflight(cfg, repo, paths=paths, environ=CLEAN_ENV).mcp_servers == ("context7",)
+
+
+# --- Plugin block list (R31) ---
+
+
+def test_refuses_a_malformed_plugin_block_list(cfg_repo, paths, fakes):
+    cfg, repo = cfg_repo
+    install_clis(fakes)
+    paths.blocked_plugins.write_text('{"plugin_keys": ["ok@synced"]}')
+    preflight(cfg, repo, paths=paths, environ=CLEAN_ENV)
+    paths.blocked_plugins.write_text("{")
+    with pytest.raises(PreflightError, match="blocked-plugins.json must be JSON"):
+        preflight(cfg, repo, paths=paths, environ=CLEAN_ENV)

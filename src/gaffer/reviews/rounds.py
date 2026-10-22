@@ -24,14 +24,14 @@ seq+1 on the same head (design), whose timer starts at that first late item (R8)
 from __future__ import annotations
 
 import time
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any, Protocol
 
 from ..config import RepoConfig
 from .checks import RequiredChecks, evaluate_required_checks
-from .coderabbit import Admission, CodeRabbitState, CodeRabbitStatus, admit, coderabbit_status
+from .coderabbit import Admission, CodeRabbitState, CodeRabbitStatus, CodexReview, admit, coderabbit_status
 from .github import GitHubReader
 
 SETTLE_SECONDS = 60
@@ -293,6 +293,7 @@ def evaluate_snapshot(
     operator_login: str,
     processed_keys: Iterable[Key],
     seconds_since_push: float,
+    codex_reviews: Sequence[CodexReview] = (),
 ) -> Observation:
     checks = evaluate_required_checks(
         repo.required_checks,
@@ -310,6 +311,7 @@ def evaluate_snapshot(
         review_comments=snap.review_comments,
         issue_comments=snap.issue_comments,
         review_threads=snap.review_threads,
+        codex_reviews=codex_reviews,
     )
     return Observation(checks, cr, adm, frozenset(adm.keys - set(processed_keys)))
 
@@ -323,9 +325,13 @@ def poll_round(
     operator_login: str,
     processed_keys: Iterable[Key],
     codex_recorded: bool,
+    codex_reviews: Sequence[CodexReview] = (),
 ) -> tuple[RoundOutcome, Observation]:
     """One AI-free poll. GitHubError and IncompleteData propagate: a failed poll
-    never counts as an empty or completed review; supervised time still runs."""
+    never counts as an empty or completed review; supervised time still runs.
+
+    codex_reviews: the Codex review recorded for this head (R31); its findings
+    are admitted items with source "codex" and enter the round's packet keys."""
     rnd.tick()
     snap = fetch_snapshot(gh, repo.github, pr_number, rnd.state.head_sha)
     obs = evaluate_snapshot(
@@ -334,6 +340,7 @@ def poll_round(
         operator_login=operator_login,
         processed_keys=processed_keys,
         seconds_since_push=rnd.state.seconds_since_push,
+        codex_reviews=codex_reviews,
     )
     out = rnd.observe(checks=obs.checks, codex_recorded=codex_recorded, coderabbit=obs.coderabbit, pending_keys=obs.pending_keys)
     return out, obs

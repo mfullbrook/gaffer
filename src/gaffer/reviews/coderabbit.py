@@ -17,6 +17,9 @@ Admission (stateless; the round subtracts already-processed keys):
 - Comments by operator_login, excluding any with a line matching `^gaffer-round: `.
 - Everything else is ignored and listed: CodeRabbit summary/status comments
   (every version), comments by anyone else, PR-body edits.
+- Codex review findings (R31): every finding of the Codex review recorded for
+  the current head is an item with source "codex", its id prefixed with the
+  head SHA; a review recorded for any other head is ignored.
 Items are keyed by (source, item id, content hash); the hash is over the body
 with NORMALIZE_PATTERN lines removed.
 """
@@ -49,10 +52,13 @@ SUMMARY_MARKER = "<!-- This is an auto-generated comment: summarize by coderabbi
 
 
 class Source(StrEnum):
+    """Item sources. The values are the store's ITEM_SOURCES (T6), so a key goes
+    straight into Store.add_item(source=key[0], item_id=key[1], content_hash=key[2])."""
+
     CODERABBIT = "coderabbit"
     OPERATOR = "operator"
-    CI = "ci"
-    TESTS = "tests"
+    CI = "check"
+    TESTS = "test"
     CODEX = "codex"
 
 
@@ -63,6 +69,7 @@ class ItemKind(StrEnum):
     ISSUE_COMMENT = "issue_comment"
     REVIEW_COMMENT = "review_comment"
     REVIEW_BODY = "review_body"
+    CODEX_FINDING = "codex_finding"
 
 
 # --- normalization and identity -------------------------------------------------
@@ -248,6 +255,7 @@ def admit(
     review_comments: Sequence[Mapping[str, Any]] = (),
     issue_comments: Sequence[Mapping[str, Any]] = (),
     review_threads: Sequence[Mapping[str, Any]] = (),
+    codex_reviews: Sequence[CodexReview] = (),
 ) -> Admission:
     admitted: list[FeedbackItem] = []
     context: list[Disregarded] = []
@@ -375,7 +383,65 @@ def admit(
         else:
             ignored.append(Disregarded("other", cid, "issue_comment", author, f"comment by someone else ({author})"))
 
+    for review in codex_reviews:
+        if review.head_sha != head_sha:
+            ignored.append(Disregarded("codex", review.head_sha, "codex_review", CODEX_AUTHOR, "Codex review for an earlier head"))
+            continue
+        admitted.extend(codex_items(review))
+
     return Admission(tuple(admitted), tuple(context), tuple(ignored), tuple(dict.fromkeys(not_reviewed)))
+
+
+# --- Codex review findings (R31) -------------------------------------------------------
+
+CODEX_AUTHOR = "codex"
+
+
+@dataclass(frozen=True)
+class CodexReview:
+    """The Codex review recorded for one head (once per head, design "Codex
+    reviewer"). findings are children.ReviewFinding objects or mappings with
+    id, severity, path, line, title and body."""
+
+    head_sha: str
+    findings: tuple[Any, ...] = ()
+
+
+def _field(f: Any, name: str) -> Any:
+    return f.get(name) if isinstance(f, Mapping) else getattr(f, name, None)
+
+
+def codex_item_id(head_sha: str, finding_id: str) -> str:
+    """Head SHA first, so the same finding text on a new head is a new item (R31, T6 report item 2)."""
+    return f"{head_sha}/{finding_id}"
+
+
+def codex_items(review: CodexReview) -> tuple[FeedbackItem, ...]:
+    out: dict[tuple[str, str, str], FeedbackItem] = {}
+    for f in review.findings:
+        fid = str(_field(f, "id") or "").strip()
+        if not fid:
+            raise ValueError("a Codex finding has no id")
+        severity = str(_field(f, "severity") or "")
+        title = str(_field(f, "title") or "")
+        body = str(_field(f, "body") or "")
+        text = f"[{severity}] {title}\n\n{body}".strip() if severity else f"{title}\n\n{body}".strip()
+        line = _field(f, "line")
+        line = line if isinstance(line, int) and not isinstance(line, bool) else None
+        path = _field(f, "path")
+        item = FeedbackItem(
+            source=Source.CODEX,
+            item_id=codex_item_id(review.head_sha, fid),
+            content_hash=content_hash(text),
+            kind=ItemKind.CODEX_FINDING,
+            author=CODEX_AUTHOR,
+            body=normalize_body(text),
+            path=path if isinstance(path, str) and path else None,
+            line_start=line,
+            line_end=line,
+        )
+        out.setdefault(item.key, item)
+    return tuple(out.values())
 
 
 def _index_threads(threads: Iterable[Mapping[str, Any]]) -> dict[int, Mapping[str, Any]]:

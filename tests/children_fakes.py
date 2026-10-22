@@ -8,6 +8,7 @@ import json
 import re
 import sys
 import textwrap
+from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
@@ -127,21 +128,20 @@ RATE_LIMIT_ALLOWED = {
 }
 
 
-def spike_tester_output(eco: str = "py", *, r5: bool = True) -> dict:
+def spike_tester_output(eco: str = "py", *, preserves: Sequence[str] | None = ("C3",)) -> dict:
     """The tester's structured output from spike/evidence/d_tester_<eco>.json, with file contents
     filled in (the evidence keeps only the paths) and an empty untestable list.
 
-    The recorded output has a guard-only criterion (C3: "shout keeps upper-casing"), which R5's
-    "at least one acceptance test per testable criterion" rejects (see the T5 report). With
-    r5=True the guard test is attached to C2 and C3 is dropped, so the output passes R5 as written."""
+    The recording predates R31's per-criterion `preserves` flag. Its C3 ("shout keeps upper-casing
+    inner text") is covered by a guard test only, which is exactly what `preserves` is for, so by
+    default C3 is marked `preserves: true` and the others false, as the tester now emits them.
+    preserves=None leaves the flag out (the raw recording's shape)."""
     data = json.loads((EVIDENCE / f"d_tester_{eco}.json").read_text())
     data["files"] = [{"path": p, "content": f"# test file {p}\n"} for p in data["files"]]
     data["untestable"] = []
-    if r5:
-        data["criteria"] = [c for c in data["criteria"] if c["id"] != "C3"]
-        for t in data["tests"]:
-            if t["criterion_id"] == "C3":
-                t["criterion_id"] = "C2"
+    if preserves is not None:
+        for c in data["criteria"]:
+            c["preserves"] = c["id"] in preserves
     return data
 
 

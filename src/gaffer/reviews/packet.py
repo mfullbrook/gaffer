@@ -1,12 +1,17 @@
 """Packets: what the writer sees after a round or a failed VERIFY.
 
-Contents (R12, R13, R24, R27): admitted feedback items, failing tester/guard
-tests, and failed required checks (title, summary, up to 50 annotations, the
+Contents (R12, R13, R24, R27, R31): admitted feedback items (CodeRabbit,
+operator and Codex review findings), failing tester/guard tests, and failed
+required checks (title, summary, up to 50 annotations, the
 last 200 log lines with ANSI stripped). Caps: 16 KB per check and 48 KB per
 packet, both cut from the end: a check keeps its newest log lines, and the
 packet keeps its first items, so the cap eats CI logs (placed last) before
 review findings. Items cut off entirely are listed as omitted and stay
 unprocessed.
+
+Failing-test and failed-check item ids start with the head SHA (as Codex
+findings' do), so an identical failure on a new head is a new item rather than
+a duplicate of one already processed (R31, T6 report item 2).
 
 R15: every item's text passes the secret scanner before it enters the packet;
 a hit raises SecretDetected (BLOCKED: secret_detected). The gitleaks scanner is
@@ -132,6 +137,24 @@ def render_failing_test(entry: InventoryEntry) -> str:
     )
 
 
+def failing_test_key(head_sha: str, entry: InventoryEntry) -> tuple[str, str, str]:
+    """(source, item id, content hash) of a failing test on head_sha."""
+    return _test_key(head_sha, entry, render_failing_test(entry))
+
+
+def failed_check_key(head_sha: str, e: CheckEvidence) -> tuple[str, str, str]:
+    """(source, item id, content hash) of a failed check on head_sha."""
+    return _check_key(head_sha, e, render_check(e))
+
+
+def _test_key(head_sha: str, entry: InventoryEntry, text: str) -> tuple[str, str, str]:
+    return (Source.TESTS.value, f"{head_sha}/{entry.test.identity}", _hash(text))
+
+
+def _check_key(head_sha: str, e: CheckEvidence, text: str) -> tuple[str, str, str]:
+    return (Source.CI.value, f"{head_sha}/{e.check_run_id}", _hash(text))
+
+
 def build_packet(
     *,
     head_sha: str,
@@ -142,16 +165,17 @@ def build_packet(
     failed_checks: Sequence[CheckEvidence] = (),
     cap: int = PACKET_CAP_BYTES,
 ) -> Packet:
-    """Order: admitted items, failing tests, failed checks. Raises SecretDetected."""
+    """Order: admitted items (CodeRabbit, operator, Codex, as given), failing
+    tests, failed checks. Raises SecretDetected."""
     blocks: list[tuple[tuple[str, str, str], str]] = []
     for it in items:
         blocks.append((it.key, render_feedback(it)))
     for entry in failing_tests:
         text = render_failing_test(entry)
-        blocks.append(((Source.TESTS.value, entry.test.identity, _hash(text)), text))
+        blocks.append((_test_key(head_sha, entry, text), text))
     for e in failed_checks:
         text = render_check(e)
-        blocks.append(((Source.CI.value, str(e.check_run_id), _hash(text)), text))
+        blocks.append((_check_key(head_sha, e, text), text))
 
     for key, text in blocks:
         findings = scanner.scan(text)

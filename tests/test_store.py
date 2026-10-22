@@ -531,17 +531,52 @@ def test_cli_evidence_per_job_refuses_unredacted_email(s):
                               codex_auth="", passed=True)
 
 
+SRT = "0.0.79"
+
+
 def test_doctor_runs_when_either_version_differs_from_the_last_pass(s):
-    assert s.doctor_needed("2.1.304", "0.160.0")
-    s.record_doctor_run(claude_version="2.1.304", codex_version="0.160.0", passed=True, results={"probes": 12})
-    assert not s.doctor_needed("2.1.304", "0.160.0")
-    assert s.doctor_needed("2.1.305", "0.160.0")
-    assert s.doctor_needed("2.1.304", "0.161.0")
-    s.record_doctor_run(claude_version="2.1.305", codex_version="0.160.0", passed=False, results={"failed": "B4"})
-    assert s.doctor_needed("2.1.305", "0.160.0")  # a failure is not a pass
+    assert s.doctor_needed("2.1.304", "0.160.0", srt_version=SRT)
+    s.record_doctor_run(claude_version="2.1.304", codex_version="0.160.0", srt_version=SRT, passed=True,
+                        results={"probes": 12})
+    assert not s.doctor_needed("2.1.304", "0.160.0", srt_version=SRT)
+    assert s.doctor_needed("2.1.305", "0.160.0", srt_version=SRT)
+    assert s.doctor_needed("2.1.304", "0.161.0", srt_version=SRT)
+    s.record_doctor_run(claude_version="2.1.305", codex_version="0.160.0", srt_version=SRT, passed=False,
+                        results={"failed": "B4"})
+    assert s.doctor_needed("2.1.305", "0.160.0", srt_version=SRT)  # a failure is not a pass
     assert s.last_doctor_pass().claude_version == "2.1.304"
-    s.record_doctor_run(claude_version="2.1.305", codex_version="0.160.0", passed=True, results={})
-    assert s.doctor_needed("2.1.304", "0.160.0")  # compared with the *last* pass only
+    s.record_doctor_run(claude_version="2.1.305", codex_version="0.160.0", srt_version=SRT, passed=True, results={})
+    assert s.doctor_needed("2.1.304", "0.160.0", srt_version=SRT)  # compared with the *last* pass only
+
+
+def test_doctor_reruns_when_the_srt_pin_changes(s):
+    """R31: a changed sandbox-runtime pin triggers a doctor rerun."""
+    s.record_doctor_run(claude_version="2.1.304", codex_version="0.160.0", srt_version=SRT, passed=True, results={})
+    assert not s.doctor_needed("2.1.304", "0.160.0", srt_version=SRT)
+    assert s.doctor_needed("2.1.304", "0.160.0", srt_version="0.0.80")
+    s.record_doctor_run(claude_version="2.1.304", codex_version="0.160.0", srt_version="0.0.80", passed=True, results={})
+    assert not s.doctor_needed("2.1.304", "0.160.0", srt_version="0.0.80")
+    assert s.doctor_needed("2.1.304", "0.160.0", srt_version=SRT)
+    assert s.last_doctor_pass().srt_version == "0.0.80"
+    for bad in ("", "  ", None):
+        with pytest.raises(ValueError, match="srt_version"):
+            s.doctor_needed("2.1.304", "0.160.0", srt_version=bad)
+        with pytest.raises(ValueError, match="srt_version"):
+            s.record_doctor_run(claude_version="2.1.304", codex_version="0.160.0", srt_version=bad, passed=True,
+                                results={})
+
+
+def test_doctor_pass_from_before_the_srt_key_reruns_doctor(db, clock):
+    """A v1 database's doctor pass has no srt version: after migrating, doctor runs again."""
+    with Store(db, clock=clock, migrations=st.MIGRATIONS[:1]) as old:
+        old._conn.execute("INSERT INTO doctor_runs (claude_version, codex_version, ran_at, passed, results)"
+                          " VALUES ('2.1.304', '0.160.0', 1.0, 1, '{}')")
+        assert old.schema_version == 1
+    with Store(db, clock=clock) as s:
+        assert s.schema_version == st.SCHEMA_VERSION == 2
+        last = s.last_doctor_pass()
+        assert last.claude_version == "2.1.304" and last.srt_version is None
+        assert s.doctor_needed("2.1.304", "0.160.0", srt_version=SRT)
 
 
 # --- rounds and supervised time (R8, R17, R25) ------------------------------
@@ -802,6 +837,7 @@ def _tick(s):
 
 CRASH_OPS = {
     "migrate": (None, lambda s: None),
+    "migrate_v2": (None, lambda s: None),  # v1 -> v2 (R31 doctor srt_version)
     "create_job": (None, lambda s: s.create_job("ENG-1", team_key="ENG", repo="o/r")),
     "set_state": (_setup_job, lambda s: s.set_state(_job(s).id, "PACKET")),
     "block": (_setup_job, lambda s: s.block(_job(s).id, "review_timeout", "30 min supervised")),
@@ -822,7 +858,7 @@ CRASH_OPS = {
         _job(s).id, claude_version="2.1.304", codex_version="0.160.0", claude_auth={"authMethod": "claude.ai"},
         codex_auth="Logged in using ChatGPT", passed=True)),
     "record_doctor_run": (None, lambda s: s.record_doctor_run(
-        claude_version="2.1.304", codex_version="0.160.0", passed=True, results={"ok": 1})),
+        claude_version="2.1.304", codex_version="0.160.0", srt_version="0.0.79", passed=True, results={"ok": 1})),
     "start_attempt": (_setup_job, lambda s: s.start_attempt(_job(s).id, role="reviewer", step="ROUND")),
     "finish_attempt": (_setup_lease, lambda s: s.finish_attempt(s.attempts(_job(s).id)[0].id, outcome="done",
                                                                 usage={"tokens": 5})),
@@ -849,7 +885,7 @@ CRASH_OPS = {
 }
 
 # Ops whose transaction has a different name from the op.
-_TX_NAME = {"migrate": "migrate_1", "tick_round": "tick_round"}
+_TX_NAME = {"migrate": "migrate_1", "migrate_v2": "migrate_2", "tick_round": "tick_round"}
 
 
 def _child_main(db: str, op: str, mode: str) -> None:
@@ -875,7 +911,9 @@ def _run_child(db: Path, op: str, mode: str) -> None:
 @pytest.mark.parametrize("op", sorted(CRASH_OPS))
 def test_crash_and_reopen(op, db, clock):
     setup, _ = CRASH_OPS[op]
-    if op != "migrate":
+    if op == "migrate_v2":
+        Store(db, clock=clock, migrations=st.MIGRATIONS[:1]).close()
+    elif op != "migrate":
         with Store(db, clock=clock) as s:
             if setup:
                 setup(s)
@@ -890,7 +928,7 @@ def test_crash_and_reopen(op, db, clock):
         assert s.schema_version == st.SCHEMA_VERSION
     before = dump(db)
 
-    if op == "migrate":
+    if op in ("migrate", "migrate_v2"):
         return
     _run_child(db, op, "after_commit")
     after = dump(db)

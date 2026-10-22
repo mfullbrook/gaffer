@@ -458,8 +458,9 @@ def test_tester_flag_set_and_result(cfg_repo, jobs, paths, fakes):
     assert "-s" not in argv and "danger-full-access" not in " ".join(argv)
     t = run.result
     assert run.result_error is None
-    assert [c for c, _ in t.criteria] == ["C1", "C2"]
-    assert t.testable_criteria == ("C1", "C2")
+    assert [c for c, _ in t.criteria] == ["C1", "C2", "C3"]
+    assert t.testable_criteria == ("C1", "C2", "C3")
+    assert t.preserves == ("C3",)
     assert t.expected_missing == ("toy.strings.word_count",)
     assert t.tests[0].identity == children.TestIdentity("tests/test_word_count.py", "tests.test_word_count",
                                                         "test_word_count_counts_whitespace_separated_words")
@@ -487,6 +488,12 @@ def test_tester_without_result_or_with_invalid_result(cfg_repo, jobs, paths, fak
     codex_exec(fakes, bad)
     run = children.run_tester(cfg, jobs, "# tester", paths=paths)
     assert run.result is None and "'C2' has no acceptance test" in run.result_error
+
+
+def test_tester_schema_requires_the_preserves_flag():
+    item = children.TESTER_SCHEMA["properties"]["criteria"]["items"]
+    assert item["properties"]["preserves"] == {"type": "boolean"}
+    assert "preserves" in item["required"] and item["additionalProperties"] is False
 
 
 def test_codex_usage_limit_from_the_rollout(cfg_repo, jobs, paths, fakes):
@@ -623,15 +630,59 @@ def test_parse_tester_result_rejects_bad_shapes():
             children.parse_tester_result(data)
 
 
-def test_recorded_spike_output_trips_the_r5_coverage_rule():
-    # The spike's real tester output has a guard-only criterion; R5 as written rejects it (report item).
-    for eco in ("py", "js"):
-        with pytest.raises(ResultError, match="'C3' has no acceptance test"):
-            children.parse_tester_result(spike_tester_output(eco, r5=False))
+@pytest.mark.parametrize("eco", ["py", "js"])
+def test_recorded_spike_output_with_guard_only_c3_is_valid(eco):
+    # R5 as amended by R31: C3 ("keeps upper-casing inner text") is a preserves criterion,
+    # so its guard test alone covers it.
+    t = children.parse_tester_result(spike_tester_output(eco))
+    assert t.preserves == ("C3",)
+    assert [x.label for x in t.tests if x.criterion_id == "C3"] == ["guard"]
+    assert t.testable_criteria == ("C1", "C2", "C3")
+
+
+@pytest.mark.parametrize("eco", ["py", "js"])
+def test_guard_only_criterion_not_marked_preserves_is_rejected(eco):
+    with pytest.raises(ResultError, match="'C3' has no acceptance test and isn't marked untestable or preserves"):
+        children.parse_tester_result(spike_tester_output(eco, preserves=()))
+
+
+def test_preserves_flag_is_required_and_boolean():
+    with pytest.raises(ResultError, match=r"criteria\[0\]\.preserves missing"):
+        children.parse_tester_result(spike_tester_output("py", preserves=None))
+    data = spike_tester_output("py")
+    data["criteria"][2]["preserves"] = "yes"
+    with pytest.raises(ResultError, match=r"criteria\[2\]\.preserves has the wrong type"):
+        children.parse_tester_result(data)
+
+
+def test_preserves_criterion_still_needs_a_test():
+    data = spike_tester_output("py")
+    data["tests"] = [t for t in data["tests"] if t["criterion_id"] != "C3"]
+    with pytest.raises(ResultError, match="'C3' \\(preserves\\) has no test"):
+        children.parse_tester_result(data)
+
+
+def test_preserves_does_not_excuse_other_criteria():
+    # Only the marked criterion may be guard-only; C2 still needs an acceptance test.
+    data = spike_tester_output("py")
+    for t in data["tests"]:
+        if t["criterion_id"] == "C2":
+            t["label"] = "guard"
+    with pytest.raises(ResultError, match="'C2' has no acceptance test"):
+        children.parse_tester_result(data)
+    # A preserves criterion may also carry acceptance tests.
+    data = spike_tester_output("py", preserves=("C2", "C3"))
+    assert children.parse_tester_result(data).preserves == ("C2", "C3")
+
+
+def test_criterion_map_text_marks_preserves_criteria():
+    text = children._criterion_map_text(children.parse_tester_result(spike_tester_output("py")))
+    assert "C3 (preserves existing behaviour: covered by guard tests):" in text
+    assert "C2 (preserves" not in text
 
 
 def test_untestable_criteria_need_no_acceptance_test():
-    data = spike_tester_output("py", r5=False)
+    data = spike_tester_output("py", preserves=())
     data["tests"] = [t for t in data["tests"] if t["criterion_id"] != "C3"]
     data["untestable"] = [{"criterion_id": "C3", "reason": "visual only"}]
     t = children.parse_tester_result(data)

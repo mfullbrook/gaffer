@@ -43,7 +43,7 @@ def failing_tests():
 def test_packet_holds_items_then_failing_tests_then_failed_checks():
     p = build_packet(head_sha="73d64291eb50", seq=2, scanner=FakeScanner(), items=[item(1)], failing_tests=failing_tests(), failed_checks=[fixture_evidence()])
     sources = [k[0] for k in p.included_keys]
-    assert sources == ["coderabbit", "tests", "tests", "tests", "ci"]
+    assert sources == ["coderabbit", "test", "test", "test", "check"]
     assert p.text.startswith("# gaffer packet: head 73d64291eb50, round 2")
     assert "app/x.py:3-5" in p.text
     assert "NameError: name 'shuot' is not defined" in p.text
@@ -124,7 +124,7 @@ def test_packet_cap_cuts_from_the_end_and_lists_omitted_items():
     p = build_packet(head_sha="h", seq=1, scanner=FakeScanner(), items=[item(1), item(2)], failed_checks=checks)
     assert p.size <= PACKET_CAP_BYTES
     assert [k[1] for k in p.included_keys][:2] == ["1", "2"]  # review items first, never cut
-    assert p.omitted_keys and all(k[0] == "ci" for k in p.omitted_keys)
+    assert p.omitted_keys and all(k[0] == "check" for k in p.omitted_keys)
     assert set(p.included_keys).isdisjoint(p.omitted_keys)
     assert len(p.included_keys) + len(p.omitted_keys) == 7
     assert "omitted by the 48 KB packet cap" in p.text
@@ -161,12 +161,12 @@ def test_secret_in_a_log_tail_is_caught_even_if_the_packet_cap_would_cut_it():
     checks.append(evidence(9, "AKIAIOSFODNN7EXAMPLE\n"))
     with pytest.raises(SecretDetected) as e:
         build_packet(head_sha="h", seq=1, scanner=FakeScanner("AKIA"), failed_checks=checks)
-    assert e.value.item_key[:2] == ("ci", "1009")
+    assert e.value.item_key[:2] == ("check", "h/1009")
 
 
 def test_verify_repair_packet_holds_only_failing_tests():
     """R24: a failed VERIFY resumes the writer with failing tester and guard tests only."""
     p = build_packet(head_sha="local", seq=0, scanner=FakeScanner(), failing_tests=failing_tests())
-    assert {k[0] for k in p.included_keys} == {"tests"}
+    assert {k[0] for k in p.included_keys} == {"test"}
     assert "test_word_count_counts_whitespace_separated_words" in p.text
     assert "file-level error" in p.text
