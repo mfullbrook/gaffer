@@ -62,8 +62,9 @@ DENY_READ_HOME_PATHS = (
 )
 
 # Path patterns are PurePosixPath.full_match globs over repo-relative paths.
-# R7 harness defaults, plus manifests and lockfiles (R14) and PHPUnit config (R29).
-COMMON_HARNESS_PATHS = ("**/Makefile", ".github/workflows/**")
+# R7 harness defaults, plus manifests and lockfiles (R14), PHPUnit config (R29)
+# and CI workflows and local actions (R30: allowed with a trailer, listed in the report).
+COMMON_HARNESS_PATHS = ("**/Makefile", ".github/workflows/**", ".github/actions/**")
 ECOSYSTEM_HARNESS_PATHS: dict[str, tuple[str, ...]] = {
     "python": (
         "**/conftest.py",
@@ -94,12 +95,18 @@ ECOSYSTEM_HARNESS_PATHS: dict[str, tuple[str, ...]] = {
 }
 
 # Design "Writer" rules: a writer commit touching these is BLOCKED: forbidden_path.
-FORBIDDEN_PATHS = ("**/.claude/**", "**/.codex/**", "**/.mcp.json", ".github/workflows/**")
+# CI workflows moved to the harness paths (R30).
+FORBIDDEN_PATHS = ("**/.claude/**", "**/.codex/**", "**/.mcp.json")
 
 DEFAULT_TEST_TIMEOUT = 15 * 60  # R4
 DEFAULT_ROUND_TIMEOUT = 30 * 60  # R8
 DEFAULT_CHECK_APPEAR_TIMEOUT = 10 * 60  # R11
 DEFAULT_CODERABBIT_APPEAR_TIMEOUT = 10 * 60  # R27
+
+# R30: job clones live outside ~/.gaffer, which is denied to every child (R28).
+DEFAULT_JOB_ROOT = "~/gaffer-jobs"
+# R28, R30: the writer's model is pinned and recorded on every launch.
+DEFAULT_WRITER_MODEL = "opus"
 
 KEYCHAIN_SERVICE = "gaffer"
 GITHUB_TOKEN_ACCOUNT = "github-token"
@@ -186,6 +193,9 @@ class Config:
     allowed_skills: tuple[str, ...]
     allowed_mcp: tuple[str, ...]
     vault_path: Path
+    job_root: Path
+    writer_model: str
+    codex_model: str | None
     repos: Mapping[str, RepoConfig]
 
     @property
@@ -243,6 +253,13 @@ def load_config(path: Path | None = None, *, home: Path | None = None) -> Config
     vault_path = _existing_dir(top, "vault_path", home, fix='set vault_path = "<path to your Obsidian vault>"; it is denied to every child (R1, R20).')
     if vault_path is not None and path.resolve().is_relative_to(vault_path.resolve()):
         top.error("(file)", f"gaffer.toml is inside the vault ({vault_path}).", f"move it outside the vault, e.g. {default_config_path(home)}.")
+    job_root = _job_root(top, home, vault_path)
+    writer_model = top.string("writer_model", required=False, fix='set writer_model to a Claude model alias or ID, e.g. "opus" (R30).')
+    if writer_model is not None and not _NAME.match(writer_model):
+        top.error("writer_model", f"{writer_model!r} is not a model name.", 'use an alias like "opus" or a full model ID (R30).')
+    codex_model = top.string("codex_model", required=False, fix='set codex_model to a Codex model name, or remove it to use the CLI default (R30).')
+    if codex_model is not None and not _NAME.match(codex_model):
+        top.error("codex_model", f"{codex_model!r} is not a model name.", "use a Codex model name, or remove it (R30).")
 
     repos: dict[str, RepoConfig] = {}
     raw_repos = top.take("repos")
@@ -265,7 +282,7 @@ def load_config(path: Path | None = None, *, home: Path | None = None) -> Config
 
     if issues:
         raise ConfigError(path, issues)
-    assert operator_login is not None and vault_path is not None
+    assert operator_login is not None and vault_path is not None and job_root is not None
     return Config(
         path=path,
         home=home,
@@ -273,6 +290,9 @@ def load_config(path: Path | None = None, *, home: Path | None = None) -> Config
         allowed_skills=allowed_skills,
         allowed_mcp=allowed_mcp,
         vault_path=vault_path,
+        job_root=job_root,
+        writer_model=writer_model or DEFAULT_WRITER_MODEL,
+        codex_model=codex_model,
         repos=repos,
     )
 
@@ -474,6 +494,26 @@ def _existing_dir(t: _Table, key: str, home: Path, *, fix: str) -> Path | None:
     if not path.is_dir():
         t.error(key, f"{path} does not exist or is not a directory.", fix)
         return None
+    return path
+
+
+def _job_root(t: _Table, home: Path, vault: Path | None) -> Path | None:
+    """R30: job clones must be readable by the sandbox, so never under a denied path."""
+    raw = t.string("job_root", required=False, fix=f'set job_root to an absolute path outside ~/.gaffer, e.g. "{DEFAULT_JOB_ROOT}" (R30).')
+    if raw is None:
+        if any(i.field == "job_root" for i in t._issues):
+            return None
+        raw = DEFAULT_JOB_ROOT
+    path = Path(home / raw[2:] if raw == "~" or raw.startswith("~/") else raw)
+    if not path.is_absolute():
+        t.error("job_root", f"{raw!r} is not an absolute path.", "use an absolute path or one starting with ~/.")
+        return None
+    denied = deny_read_paths(home, vault) if vault is not None else deny_read_paths(home, home / ".gaffer")
+    for d in denied:
+        if path == d or path.is_relative_to(d) or d.is_relative_to(path):
+            t.error("job_root", f"{path} overlaps the denied path {d}, so the sandbox couldn't read its own job (R28, R30).",
+                    f'move job_root outside every denied path, e.g. "{DEFAULT_JOB_ROOT}".')
+            return None
     return path
 
 

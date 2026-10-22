@@ -151,7 +151,7 @@ The skipped-gates statements required by source spec §10 (staging, legal, live 
   - Missing or malformed structured result: BLOCKED: writer_no_result.
   - No commits beyond the tester commit: BLOCKED: writer_no_change.
   - The tester commit is no longer an ancestor of HEAD: BLOCKED: tester_commit_rewritten.
-  - Any commit touches `.claude/`, `.codex/`, `.mcp.json` or CI workflow files: BLOCKED: forbidden_path.
+  - Any commit touches `.claude/`, `.codex/`, `.mcp.json` or CI workflow files: BLOCKED: forbidden_path. *Amended by R30: CI workflows and `.github/actions/` are harness paths (trailer required, listed in the report), not forbidden.*
   - A writer commit that changes tester files needs a `Tester-Change-Reason:` trailer, and the report lists it.
 
 **Codex reviewer.** One review per head SHA, started after PUBLISH, persisted keyed by head. A rerun reuses a recorded review. On failure, one retry, then BLOCKED: reviewer_failed. A head with no Codex review can never be READY.
@@ -2081,7 +2081,7 @@ Actual answer: A) Add to TODOS.md (D33 answer, 2026-10-18)
 Accepted scope: Add a P1 item under ## Scheduler in TODOS.md: Approach B capacity scheduler daemon (quota-window model from measured usage, admission with tester/reviewer/repair reservations, overnight interval, daytime headroom), `agent-ready` pickup, launchd, Jasper/Telegram notifier, Linear write-back (deferred by D1), two-job limit; depends on the v0.1 demo (SC2-SC5) and Experiment 1 quota data. Effort XL.
 History: none
 
-Approval readiness: PASS. Checked: D1 (D1 answer), D2 (D2 answer), D3 (D3 answer), R1 (D4), R2 (D5), R3 (D7), R4 (D8), R5 (D9), R6 (D10), R7 (D11), R8 (D12), R9 (D13), R10 (D14), R11 (D15), R12 (D16), R13 (D18), R14 (D19), R15 (D20), R16 (D21), R17 (D22, subsumed by R25), R18 (D23), R19 (D24), R20 (D25), R21 (D26), R22 (D27), R24 (D29), R25 (D30), R26 (D31), T1 (D32), T2 (D33), R27 (Mark, 2026-10-20, after Experiment 2), R28 (Mark, 2026-10-22, after Experiment 3), R29 (Mark, 2026-10-22, after Experiment 3b). Architecture #3 (argv-only, issue-key validation) carried by prior approval of the design Constraints. Unresolved: R23 (D28 = investigate first; no remedy approved).
+Approval readiness: PASS. Checked: D1 (D1 answer), D2 (D2 answer), D3 (D3 answer), R1 (D4), R2 (D5), R3 (D7), R4 (D8), R5 (D9), R6 (D10), R7 (D11), R8 (D12), R9 (D13), R10 (D14), R11 (D15), R12 (D16), R13 (D18), R14 (D19), R15 (D20), R16 (D21), R17 (D22, subsumed by R25), R18 (D23), R19 (D24), R20 (D25), R21 (D26), R22 (D27), R24 (D29), R25 (D30), R26 (D31), T1 (D32), T2 (D33), R27 (Mark, 2026-10-20, after Experiment 2), R28 (Mark, 2026-10-22, after Experiment 3), R29 (Mark, 2026-10-22, after Experiment 3b), R30 (Mark, 2026-10-22, after the T4 review). Architecture #3 (argv-only, issue-key validation) carried by prior approval of the design Constraints. Unresolved: R23 (D28 = investigate first; no remedy approved).
 
 ### R27: Experiment 2 corrections (CodeRabbit completion and admission)
 Finding: Experiment 2 (`docs/experiments/coderabbit.md`, commit 93eb5a3), section 8 proposals; T2 fixtures in `tests/fixtures/coderabbit/`.
@@ -2153,6 +2153,23 @@ State: approved
 Actual answer: A) Allow api.github.com + codeload.github.com for PHP repos (Mark, 2026-10-22). Other rows fold in the 3b findings.
 Accepted scope: the "After (approved)" column above.
 History: amends R1, R4, R14, R20, R22 and R28; closes Experiment 3b.
+
+### R30: T4 review decisions (job root, CI files, models)
+Finding: T4 report (`docs/t4-config-report.md`, commit 7d5d530), items 1-5; Mark's review 2026-10-22.
+Plan baseline: R9 job state under `~/.gaffer/jobs/`; R28 denies `~/.gaffer`; design Writer rules forbid CI workflow files while R7 lists them as harness files; R28 says the writer model is pinned in config but no field exists; R1/R20 deny "the vault" with no path.
+
+| Choice | Before | After (approved) |
+|---|---|---|
+| Job clones (R9, R21) | `~/.gaffer/jobs/` (denied to children by R28) | global `job_root`, default `~/gaffer-jobs`; refused if it overlaps any denied path or the vault. Locks, `state.db`, logins and gaffer.toml stay in `~/.gaffer` and stay denied |
+| CI files | forbidden (design) and harness (R7) at once | **harness, not forbidden**: `.github/workflows/**` and `.github/actions/**` may be changed with a `Tester-Change-Reason:` trailer; the report lists every such change prominently. Accepted risk: an edited workflow runs with the repo's Actions secrets once CI runs on the PR (Mark, 2026-10-22) |
+| Writer model (R28) | unpinned | global `writer_model`, default `"opus"`, passed as `--model` on every writer launch and resume and recorded in the report; optional `codex_model` (unset = CLI default) passed as `-m` |
+| Vault (R1, R20) | "the vault", no path | required global `vault_path`, must exist; gaffer.toml refused inside it |
+| MCP definitions (R3) | names only | `allowed_mcp` holds names; where full `--mcp-config` definitions live is T5's call |
+
+State: approved
+Actual answer: job root = `~/gaffer-jobs`; CI files = allowed with a reason; models = config field, default opus (Mark, 2026-10-22). Vault and MCP rows record the T4 session's choices.
+Accepted scope: the "After (approved)" column above.
+History: amends R1, R3, R7, R9, R20, R21, R28 and the design's Writer rules.
 
 ## v0.1 plan as amended by eng review
 
@@ -2308,7 +2325,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: Outside voice, R26
   - Files: spike/ (throwaway), docs/spike-results.md
   - Verify: each named proof recorded pass/fail; any fail reopens its ledger record
-- [ ] **T4 (P1, human: ~4h / CC: ~20 min)** config: gaffer.toml schema and Keychain lookup
+- [x] **T4 (P1, human: ~4h / CC: ~20 min)** config: gaffer.toml schema and Keychain lookup
   - Surfaced by: R3, R4, R6, R7, R11, R14
   - Files: src/gaffer/config.py, tests/test_config.py
   - Verify: `uv run pytest tests/test_config.py`

@@ -76,6 +76,8 @@ def test_minimal_config_loads_with_defaults(home):
     assert cfg.operator_login == "mfullbrook"
     assert cfg.allowed_skills == () and cfg.allowed_mcp == ()
     assert cfg.vault_path == home / "vault"
+    assert cfg.job_root == home / "gaffer-jobs"
+    assert (cfg.writer_model, cfg.codex_model) == ("opus", None)
     r = cfg.repos["ENG"]
     assert r.path == home / "src" / "app"
     assert (r.github, r.base, r.runner, r.junit_path) == ("mfullbrook/app", "main", "pytest", "junit.xml")
@@ -93,6 +95,9 @@ def test_full_config_loads(home):
         vault_path = "~/vault"
         allowed_skills = ["code-loop", "gstack:review"]
         allowed_mcp = ["context7"]
+        job_root = "~/work/jobs"
+        writer_model = "claude-opus-5-5"
+        codex_model = "gpt-6-astra"
     """)
     body = repo(
         ecosystems='["python", "node"]',
@@ -109,6 +114,8 @@ def test_full_config_loads(home):
     cfg = load(home, body, globals_=globals_)
     assert cfg.allowed_skills == ("code-loop", "gstack:review")
     assert cfg.allowed_mcp == ("context7",)
+    assert cfg.job_root == home / "work" / "jobs"
+    assert (cfg.writer_model, cfg.codex_model) == ("claude-opus-5-5", "gpt-6-astra")
     r = cfg.repos["ENG"]
     assert r.install_command == "uv sync && npm ci"
     assert r.skippable_checks == ("test",)
@@ -230,7 +237,7 @@ def test_config_file_is_inside_the_deny_list(home):
 @pytest.mark.parametrize(
     "relpath",
     ["conftest.py", "tests/unit/conftest.py", "pytest.ini", "pyproject.toml", "setup.cfg", "tox.ini",
-     "uv.lock", "requirements-dev.txt", "Makefile", ".github/workflows/ci.yml"],
+     "uv.lock", "requirements-dev.txt", "Makefile", ".github/workflows/ci.yml", ".github/actions/setup/action.yml"],
 )
 def test_python_harness_defaults(home, relpath):
     assert load(home).repos["ENG"].is_harness_path(relpath)
@@ -255,9 +262,34 @@ def test_harness_paths_extend_defaults(home):
     assert not r.is_harness_path("src/app.py")
 
 
-@pytest.mark.parametrize("relpath", [".claude/settings.json", "sub/.claude/agents/x.md", ".codex/config.toml", ".mcp.json", ".github/workflows/ci.yml"])
+@pytest.mark.parametrize("relpath", [".claude/settings.json", "sub/.claude/agents/x.md", ".codex/config.toml", ".mcp.json"])
 def test_forbidden_defaults(home, relpath):
     assert load(home).repos["ENG"].is_forbidden_path(relpath)
+
+
+@pytest.mark.parametrize("relpath", [".github/workflows/ci.yml", ".github/actions/setup/action.yml"])
+def test_ci_files_are_harness_not_forbidden(home, relpath):
+    """R30: CI edits are allowed with a Tester-Change-Reason trailer and listed in the report."""
+    r = load(home).repos["ENG"]
+    assert r.is_harness_path(relpath)
+    assert not r.is_forbidden_path(relpath)
+
+
+@pytest.mark.parametrize("job_root", ['"~/.gaffer/jobs"', '"~/.gaffer"', '"~"', '"~/vault/jobs"', '"~/.ssh/x"', '"jobs"'])
+def test_job_root_must_be_readable_by_the_sandbox(home, job_root):
+    globals_ = f'operator_login = "mfullbrook"\nvault_path = "~/vault"\njob_root = {job_root}\n'
+    assert "job_root" in issues(home, globals_=globals_)
+
+
+def test_job_root_is_outside_every_denied_path(home):
+    cfg = load(home)
+    assert not any(cfg.job_root.is_relative_to(d) for d in cfg.deny_read_paths)
+
+
+@pytest.mark.parametrize("key", ["writer_model", "codex_model"])
+def test_bad_model_names(home, key):
+    globals_ = f'operator_login = "mfullbrook"\nvault_path = "~/vault"\n{key} = "opus --dangerously-skip-permissions"\n'
+    assert key in issues(home, globals_=globals_)
 
 
 def test_forbidden_paths_cannot_be_removed(home):
