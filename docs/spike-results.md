@@ -322,3 +322,183 @@ Signals as found in Experiment 1. Claude: `rate_limit_event.unifiedWindows` in s
 - **Kept:** `~/.gaffer/claude` and `~/.gaffer/codex` (logins, the copied `code-loop` skill, account-synced content and session logs from the spike).
 - **Deleted:** the toy repos, the job clones and `~/.gaffer-spike-canary*`.
 - **Unchanged:** `~/.claude` and `~/.codex`.
+
+## 3b: PHP
+
+Run 2026-10-22, branch `gaffer-v0.1-design`, for R28's "PHP installs must be proven before module code". Decisions in scope: R14, R20 and R22.
+
+**Versions:**
+
+- Claude Code `2.1.304`, `codex-cli 0.160.0`.
+- Laravel Herd's PHP `8.4.22` and Composer `2.10.1`, from `~/Library/Application Support/Herd/bin`.
+- **sandbox-runtime `0.0.79`** (`@anthropic-ai/sandbox-runtime`, published 2026-10-07, so at least two weeks old; the latest is 0.0.81). Installed with `npm install --ignore-scripts --save-exact` into `~/.gaffer/tools/sandbox-runtime`, not globally. Its dependencies resolved to `zod 3.25.76`, `commander 12.1.0`, `node-forge 1.4.0` and `@pondwader/socks5-server 1.0.10`. The binary is `~/.gaffer/tools/sandbox-runtime/node_modules/.bin/srt`.
+
+**Toy repo** (`spike/make_php_toy.sh`): a disposable repo from `mktemp` that requires `monolog/monolog ^3` and `symfony/polyfill-ctype ^1.30`, with `phpunit/phpunit ^11.5` in require-dev. That came to 30 locked packages: monolog 3.12.1, polyfill-ctype 1.37.0 and PHPUnit 11.5.57 with its dependencies. `composer.lock` was resolved under sandbox-runtime with the two Packagist hosts only (`p_lock.txt`). Every job clone gets `COMPOSER_HOME=<job>/composer-home` and `COMPOSER_CACHE_DIR=<job>/composer-home/cache`.
+
+**Model runs:** two Sonnet writer runs, both for step 3a. Everything else ran under `srt` or `codex sandbox`, which cost no quota.
+
+### Results
+
+| # | Proof | Ledger | Result | Evidence |
+|---|---|---|---|---|
+| 3b.1 | Herd php/composer run under the writer's Claude sandbox and under sandbox-runtime | R14 | **PASS**, with Herd's bin dir on the launcher's PATH | `p_herd.txt`, `p_writer_a.txt` |
+| 3b.2 | `composer install` with allowedDomains = `repo.packagist.org`, `packagist.org` only: (a) writer sandbox, (b) sandbox-runtime | R14 | **FAIL** in both setups (exit 100): every dist archive comes from `api.github.com` | `p_writer_a.txt`, `p_install_trials.txt` t1 |
+| 3b.3 | Smallest host set that installs | R14 | **PASS with `api.github.com` + `codeload.github.com`**: GitHub hosts are needed (options below) | `p_install_trials.txt` t3–t7, `p_writer_b.txt` |
+| 3b.4 | Install with **no network** from a pre-filled Composer cache | R14 | **PASS** (30 packages, 0 hosts) | `p_install_trials.txt` t8, `p_phpunit.txt` |
+| 3b.5 | R20 credential denies, write denies and blocked hosts under the candidate settings: (a) writer sandbox, (b) sandbox-runtime | R1, R14, R20 | **PASS** in both (rows identical) | `p_writer_b.txt`, `p_srt_final.txt` |
+| 3b.6 | PHPUnit with JUnit under the Codex `gaffer_test` profile (network off) | R20, R22 | **PASS**: shapes recorded; a file-level fatal leaves no JUnit file | `p_phpunit.txt` |
+
+R14's accepted scope, "php: repo.packagist.org, packagist.org … no GitHub hosts", **does not install PHP dependencies**. The ledger is unchanged; the options are below for Mark.
+
+### Step 2: what Herd's php and composer need
+
+- **PATH:** `php` is a real Mach-O binary (`php -> php84`), not a shim. `composer` is a phar with `#!/usr/bin/env php`. Neither is on the `env -i` PATH, so the launcher must prepend `~/Library/Application Support/Herd/bin` (the path contains a space). It must do this for the writer's `claude` process, `srt` and `codex sandbox`. The writer's Bash tool inherits the launcher's PATH as is, with Herd first (`p_writer_a.txt`).
+- **ini:** Herd's own `php.ini` is found only through `HERD_PHP_84_INI_SCAN_DIR`, which Mark's `~/.zshrc` exports. Under `env -i`, PHP runs with **no ini at all**, so the Herd extension, `auto_prepend_file` (Herd's dump loader) and `openssl.cafile` are all absent. Composer then verifies TLS with its bundled CA roots, which worked in every setup. With the variable set, PHP also ran fine under the sandbox: the Herd extension and the dump loader load, and Composer works. gaffer can leave the variable unset.
+- **Reads:** the Herd bin dir, `/Applications/Herd.app/Contents/Resources` (only with the ini) and the job dir. All are allowed by default.
+- **Writes:** only `COMPOSER_HOME`, `COMPOSER_CACHE_DIR`, `vendor/` and `TMPDIR`, all inside the job dir. Writes to `~/.composer` were DENIED and nothing needed them.
+- **Sockets:** none needed. With no ini, PHP never touches Herd's sockets (`herd.sock`, `herd84.sock`, `herd-debug.sock`), and with the ini, nothing tried to connect to them. A direct `stream_socket_client` to `herd.sock` (a symlink to the FPM socket `herd84.sock`) was refused: the sandbox log shows `deny network-outbound …/Herd/herd84.sock`, because Unix sockets are blocked by default. The macOS sandbox log for `php84` showed only `mach-lookup com.apple.diagnosticd`, `com.apple.SystemConfiguration.configd` and `sysctl-read kern.iossupportversion` denials (logging and system proxy lookup). None broke anything.
+- **Sandbox quirks found on the way:**
+  - **`srt` needs a short `TMPDIR`.** It binds a Unix socket in `$TMPDIR`, and `<job>/tmp` exceeded macOS's 104-byte socket path limit (`listen EINVAL`). `srt` keeps the system `TMPDIR`, and the wrapped command gets `TMPDIR=<job>/tmp` (`spike/p_srt_run.sh`).
+  - **`/dev/fd` is denied under `srt`,** so bash process substitution (`>(tee …)`) fails there.
+  - **Claude's Bash tool overrides `TMPDIR`** to `/tmp/claude-501`, whatever the launcher sets.
+
+### Steps 3 and 4: hosts Composer tries
+
+Trials ran under sandbox-runtime in a fresh job clone with an empty cache each time (`spike/p_install_trial.sh`, `-vvv`). The host lists come from Composer's own log and `srt --debug` decisions.
+
+| Trial | allowedDomains | Result | What Composer tried |
+|---|---|---|---|
+| t1 | repo.packagist.org, packagist.org | **exit 100**, 0 installed | 30 dist URLs `api.github.com/repos/<o>/<r>/zipball/<sha>`, 120 denied attempts (4 tries each). Writer sandbox: identical (`p_writer_a.txt`) |
+| t2 | same, `--prefer-source` | **exit 100** | `git clone https://github.com/...` ×30, denied, then the dist fallback to `api.github.com`, denied |
+| t3 | + codeload.github.com | **exit 100** | Composer never rewrites to codeload itself, so the `api.github.com` requests are still denied |
+| t5 | + api.github.com (no codeload) | **exit 100** | `api.github.com` answers 302 → `codeload.github.com/<o>/<r>/legacy.zip/<sha>`, denied |
+| t4 | packagist ×2 + api.github.com + codeload.github.com | **exit 0**, 30 installed | the above, plus `packagist.org/downloads` (install stats) |
+| t6 | repo.packagist.org + api + codeload | **exit 0** | `packagist.org/downloads` denied, ignored |
+| t7 | api.github.com + codeload.github.com only | **exit 0** | `repo.packagist.org` (advisory lists) and `packagist.org/downloads` denied, ignored |
+| t8 | **none**, cache pre-filled from t4 | **exit 0**, 30 from cache | Packagist calls denied, ignored |
+
+- **Minimal set for `composer install` from a lockfile: `api.github.com` + `codeload.github.com`.** The Packagist hosts are optional for installs. `objects.githubusercontent.com` was never contacted.
+- **Changing dependencies** (`composer require` or `update`) also needs `repo.packagist.org` for metadata. The lock resolve used `repo.packagist.org` only (`p_lock.txt`).
+- **`--prefer-dist` vs source.** `--prefer-dist` is the default for tagged releases. `--prefer-source` needs git over `github.com` (443, and 22 via `GIT_SSH_COMMAND`), which both sandboxes deny. When `api.github.com` is allowed, Composer falls back to the dist archive and still exits 0. Source installs are therefore never needed, and `github.com` can stay blocked.
+- **GitHub API rate limit.** One unauthenticated `api.github.com` request per package (30 here). The zipball endpoint answers with a 302 that GitHub tags `x-ratelimit-resource: core` but does not count: `used` stayed at 0/60 after two full installs. That was checked with `GET /rate_limit` before and after, and on one zipball request by hand. Even so, a large project (Laravel apps lock 100+ packages) would hit the 60/hour limit if these requests ever started counting. A warm cache makes repeat installs cost 0 requests.
+
+### Step 5: probes under the candidate settings
+
+The writer (Claude sandbox) and sandbox-runtime gave identical rows (`p_writer_b.txt`, `p_srt_final.txt`):
+
+```
+write job dir / source repo / $HOME / ~/.gaffer / ~/.composer     ALLOWED / DENIED / DENIED / DENIED / DENIED
+read + stat canary                                                DENIED
+read ~/.ssh/{id_ed25519,config}, ~/.config/gh/hosts.yml,
+     ~/Library/Keychains/login.keychain-db, ~/.claude/.credentials.json,
+     ~/.claude.json, ~/.codex/auth.json, ~/.gaffer/{claude,codex} creds   DENIED
+read ~/.composer/latest.phar                                      DENIED
+read Herd Valet CA private key                                    DENIED
+read job file / Herd php.ini                                      ALLOWED
+GET repo.packagist.org 200, api.github.com/zen 200, codeload.github.com 301
+GET example.com, github.com, objects.githubusercontent.com, pypi.org   000 (blocked)
+git ls-remote origin (fake GitHub) / github.com/Seldaek/monolog   DENIED
+composer install --prefer-source                                  github.com clones denied (https and :22); dist fallback, exit 0
+```
+
+`api.github.com/zen` returning 200 shows that allowing the host allows **every path and method on it**, not just zipballs. Neither sandbox filters by path in this configuration.
+
+### Step 6: PHPUnit under the network-off test sandbox
+
+PHPUnit ran under `codex sandbox -P gaffer_test` (the R28 profile: credentials denied, writes limited to the job dir, no network) as `php vendor/bin/phpunit --log-junit <job>/junit.xml --do-not-cache-result`. Herd PHP under that profile could not read the canary or `~/.ssh/config`, could not reach Packagist, and could not write `$HOME` (`p_phpunit.txt`). Before that, the verification worktree installed its dependencies under `srt` **with no hosts at all**, from the job's warm cache.
+
+**JUnit shape** (`<testcase name file line class classname assertions time>`; `classname` uses dots, `class` the real FQCN; `file` is present, unlike pytest's xunit2):
+
+| Case | JUnit |
+|---|---|
+| assertion failure | `<failure type="PHPUnit\Framework\ExpectationFailedException">` "Failed asserting that two strings are identical." |
+| runtime exception | `<error type="RuntimeException">` "RuntimeException: boom" |
+| TypeError | `<error type="TypeError">` |
+| **missing class** | `<error type="Error">` `Error: Class "Toy\WordCounter" not found` |
+| missing function | `<error type="Error">` `Error: Call to undefined function Toy\word_count()` |
+| typo (undefined method) | `<error type="Error">` `Error: Call to undefined method Toy\Strings::shuot()` |
+| skipped and **incomplete** | both `<skipped/>`, with no message (R7: counts as failed) |
+| **file-level fatal** (missing base class, parse error) | **no JUnit file at all**, exit 255. PHPUnit aborts while building the suite, so every other test file is lost too. stdout has `Message:  Class "Toy\Testing\WordCase" not found` / `Location: <file>:<line>` |
+
+Element text starts with `<Class>::<method>` on its own line, followed by the exception line.
+
+What this means for the R22 adapter and R5 classification:
+
+- **Classification:** R28's exception-type rule carries over directly. `ExpectationFailedException` is the assertion type. `Error`, `TypeError` and the rest are valid only if the text names an `expected_missing` symbol. The missing class and missing function name it; the typo doesn't.
+- **File-level fatals:** "missing JUnit = failed" (R4/R7) would turn a single missing base class into a failure of the whole run. Running PHPUnit once per test file isolates it: with the broken file present, `phpunit tests/ShapesTest.php` still produced all 9 testcases. The broken file's own run then exits 255 with the `Message`/`Location` lines, which the adapter would have to parse to treat it like pytest's collection error.
+- **Verification worktrees:** a **symlinked `vendor/` is wrong for PHP.** Composer's autoload maps resolve `src/` relative to vendor's real path, so the tests would load the job clone's code. Each worktree needs its own `composer install`, which works offline from the job's cache.
+
+### Exact settings used
+
+**Writer (Claude sandbox)**, generated by `spike/writer_settings.sh` with `ALLOWED_DOMAINS`, launched by `spike/p_writer.sh`:
+
+```json
+"sandbox": {"enabled": true, "failIfUnavailable": true, "autoAllowBashIfSandboxed": true, "allowUnsandboxedCommands": false,
+  "filesystem": {"allowWrite": ["<job>"], "denyRead": ["~/.ssh", "~/.config/gh", "~/.aws", "~/Library/Keychains", "~/.claude",
+     "~/.codex", "~/.gaffer", "~/.claude.json", "~/.composer", "~/.config/composer",
+     "~/Library/Application Support/Herd/config/valet", "<canary dir>"]},
+  "network": {"allowedDomains": ["repo.packagist.org", "packagist.org"]}}          // 3b.2 (fails)
+  "network": {"allowedDomains": ["repo.packagist.org", "packagist.org",
+                                 "api.github.com", "codeload.github.com"]}}        // 3b.3/3b.5 candidate (works)
+```
+
+Launch env additions: `PATH=<Herd bin>:<clean PATH>`, `COMPOSER_HOME=<job>/composer-home`, `COMPOSER_CACHE_DIR=<job>/composer-home/cache` and `COMPOSER_NO_INTERACTION=1`. The other flags are as in "Final working flag sets".
+
+**install_command (sandbox-runtime)**, `spike/p_srt_settings.sh` and `p_srt_run.sh`:
+
+```json
+{"network": {"allowedDomains": ["<hosts>"], "deniedDomains": []},
+ "filesystem": {"denyRead": ["<same deny list>"], "allowWrite": ["<job>"], "denyWrite": []}}
+```
+
+```
+env -i HOME PATH=<Herd bin>:<clean PATH> USER TMPDIR=<system tmp> LANG TERM=dumb \
+  COMPOSER_HOME=<job>/composer-home COMPOSER_CACHE_DIR=<job>/composer-home/cache COMPOSER_NO_INTERACTION=1 \
+  ~/.gaffer/tools/sandbox-runtime/node_modules/.bin/srt --settings <file> \
+  -c 'export TMPDIR=<job>/tmp; cd <checkout> && composer install --no-progress'
+```
+
+Unix sockets stay blocked (the srt default); nothing needed them.
+
+### Options for R14 (GitHub hosts), not chosen
+
+R14 says no GitHub hosts, and PHP installs can't work without them unless gaffer fetches the archives some other way:
+
+- **(a) Allow `api.github.com` + `codeload.github.com` for PHP repos only** (writer and install_command). It's simple and proven here. The cost: the sandbox can then reach the **whole GitHub REST API**, every path and method. Code inside the sandbox (an install script, or a prompt-injected writer) could send data out by calling the API with a token of its own, for example by opening an issue on an attacker's repo. `codeload` is GET-only, so it's a much smaller channel.
+- **(b) Same hosts with path filtering.** sandbox-runtime has an experimental `network.tlsTerminate` + `filterRequest` that could allow only `GET /repos/*/zipball/*` on `api.github.com`. **Untested.** The library API is needed for `filterRequest`, and the writer's Claude sandbox exposes no equivalent. So this would cover install_command only, and is experimental.
+- **(c) gaffer pre-fills the Composer cache outside the sandbox.** gaffer's own downloader would fetch only the dist URLs listed in `composer.lock` (`api.github.com/.../zipball/<sha>` → codeload) into the job's `COMPOSER_CACHE_DIR`. It would check each archive against the lock reference, then run `composer install` with **no network** (t8 proves the install part). No sandboxed process gets a GitHub host. But gaffer itself then contacts GitHub, and a writer that needs a **new** PHP dependency can't fetch it, so the job ends `BLOCKED: needs_dependency` (R14 option B behavior, PHP only).
+- **(d) Mixed:** (c) for install_command, plus (a) in the writer sandbox only when a ticket needs to change PHP dependencies (per repo, through `extra_hosts`).
+- **(e) A dist mirror** (Private Packagist, or a self-hosted Satis/Velocita with `dist` mirroring), so archives come from a non-GitHub host. That's new infrastructure, outside v0.1 scope.
+
+### Differences from the ledger (3b)
+
+1. **R14:** the PHP host list in R14 can't install anything. Options above.
+2. **R1 and R20 deny list:**
+   - **Composer credential locations.** `~/.composer` and `~/.config/composer` hold `auth.json` when Composer has GitHub, Packagist or Bitbucket tokens. Neither file exists today, but both dirs exist.
+   - **Herd's local CA private key** (`~/Library/Application Support/Herd/config/valet/CA/LaravelValetCASelfSigned.key`). That CA is trusted by macOS, so whoever reads the key can mint certificates the machine trusts.
+
+   3b denied all three, and Herd still worked.
+3. **R14 install_command env:** Herd's bin dir must go on PATH. `srt` needs the short system `TMPDIR`, with the job `TMPDIR` set inside the wrapped command. Claude's Bash tool sets its own `TMPDIR`.
+4. **R22 PHPUnit adapter:**
+   - **Fatals:** a file-level fatal leaves no JUnit file. That needs per-file runs or stdout parsing.
+   - **Shapes:** incomplete tests are `<skipped/>`. Testcases carry `file`, `class` and a dotted `classname`.
+   - **Worktrees:** verification worktrees need their own `composer install`; a symlinked `vendor/` won't work.
+5. **R5:** no change. The exception-type rule fits PHPUnit: `ExpectationFailedException` is the assertion type, and `Error` messages name the missing symbol.
+6. **File-tool Read rules for single files.** `writer_settings.sh` builds `Read(//<path>/**)`, which doesn't match a file like `~/.claude.json`. The Bash sandbox's `denyRead` covers the file at OS level (DENIED above), but file-tool Read of single files needs exact-path rules, as Proof B showed. File-tool reads were not re-probed in 3b.
+
+### Quota (3b)
+
+| Pool | Before | After | Notes |
+|---|---|---|---|
+| Claude Pro, 5-hour | not read | 0.09 after both runs | Two Sonnet writer runs, 2 turns each. A new 5-hour window, shared with this supervising session. |
+| Claude Pro, 7-day | not read | 0.12 after both runs | `isUsingOverage: false` |
+| Codex Plus | unchanged | unchanged | No `codex exec`. `codex sandbox` runs are free. |
+| GitHub unauthenticated core | 0/60 | 0/60 | zipball 302s were not counted |
+
+### State left behind (3b)
+
+- **Kept:**
+  - `~/.gaffer/tools/sandbox-runtime` (sandbox-runtime 0.0.79, pinned in its `package.json` and `package-lock.json`);
+  - `~/.gaffer/claude` and `~/.gaffer/codex`.
+- **Deleted:** the PHP toy repo, every job clone and verify worktree, and `~/.gaffer-spike-canary`.
+- **Unchanged:** `~/.claude`, `~/.codex`, `~/.composer`, `~/.config/composer` and Herd's config.

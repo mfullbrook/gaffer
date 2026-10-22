@@ -1,0 +1,149 @@
+# composer install trials under sandbox-runtime 0.0.79 (spike/p_install_trial.sh), fresh job clone and empty cache each
+# Composer 2.10.1, Herd PHP 8.4.22, toy lock = 30 packages (monolog, polyfill-ctype, phpunit 11 + deps)
+
+===== t1 hosts=repo.packagist.org,packagist.org args=[]
+packages installed: 0
+-- URLs Composer requested (host + first path segment, count):
+ 151 https://api.github.com/repos
+   2 https://repo.packagist.org/packages.json
+   2 https://repo.packagist.org/lists
+-- api.github.com requests: 30
+-- sandbox network decisions:
+ 120 No matching config rule, denying: api.github.com:443
+   1 Allowed by config rule: repo.packagist.org:443
+
+===== t2 hosts=repo.packagist.org,packagist.org args=[--prefer-source]
+packages installed: 0
+-- URLs Composer requested (host + first path segment, count):
+ 147 https://github.com/sebastianbergmann
+ 121 https://api.github.com/repos
+  14 https://github.com/phar-io
+   7 https://github.com/theseer
+   7 https://github.com/symfony
+   7 https://github.com/staabm
+   7 https://github.com/Seldaek
+   7 https://github.com/php-fig
+   7 https://github.com/nikic
+   7 https://github.com/myclabs
+   2 https://repo.packagist.org/packages.json
+   2 https://repo.packagist.org/lists
+-- api.github.com requests: 30
+-- sandbox network decisions:
+ 120 No matching config rule, denying: api.github.com:443
+  30 No matching config rule, denying: github.com:443
+   1 Allowed by config rule: repo.packagist.org:443
+
+===== t3 hosts=repo.packagist.org,packagist.org,codeload.github.com args=[]
+packages installed: 0
+-- URLs Composer requested (host + first path segment, count):
+ 151 https://api.github.com/repos
+   2 https://repo.packagist.org/packages.json
+   2 https://repo.packagist.org/lists
+-- api.github.com requests: 30
+-- sandbox network decisions:
+ 120 No matching config rule, denying: api.github.com:443
+   1 Allowed by config rule: repo.packagist.org:443
+
+===== t5 hosts=repo.packagist.org,packagist.org,api.github.com args=[]
+packages installed: 0
+-- URLs Composer requested (host + first path segment, count):
+ 105 https://codeload.github.com/sebastianbergmann
+  60 https://api.github.com/repos
+  10 https://codeload.github.com/phar-io
+   6 https://codeload.github.com/Seldaek
+   5 https://codeload.github.com/theseer
+   5 https://codeload.github.com/symfony
+   5 https://codeload.github.com/staabm
+   5 https://codeload.github.com/php-fig
+   5 https://codeload.github.com/nikic
+   5 https://codeload.github.com/myclabs
+   2 https://repo.packagist.org/packages.json
+   2 https://repo.packagist.org/lists
+-- api.github.com requests: 30
+-- sandbox network decisions:
+ 120 No matching config rule, denying: codeload.github.com:443
+   8 Allowed by config rule: api.github.com:443
+   1 Allowed by config rule: repo.packagist.org:443
+
+===== t4 hosts=repo.packagist.org,packagist.org,codeload.github.com,api.github.com args=[]
+packages installed: 30
+-- URLs Composer requested (host + first path segment, count):
+  60 https://api.github.com/repos
+  42 https://codeload.github.com/sebastianbergmann
+   4 https://codeload.github.com/phar-io
+   2 https://repo.packagist.org/packages.json
+   2 https://repo.packagist.org/lists
+   2 https://packagist.org/downloads
+   2 https://codeload.github.com/theseer
+   2 https://codeload.github.com/symfony
+   2 https://codeload.github.com/staabm
+   2 https://codeload.github.com/Seldaek
+   2 https://codeload.github.com/php-fig
+   2 https://codeload.github.com/nikic
+   2 https://codeload.github.com/myclabs
+-- api.github.com requests: 30
+-- sandbox network decisions:
+   8 Allowed by config rule: codeload.github.com:443
+   8 Allowed by config rule: api.github.com:443
+   1 Allowed by config rule: repo.packagist.org:443
+   1 Allowed by config rule: packagist.org:443
+
+===== t6 hosts=repo.packagist.org,codeload.github.com,api.github.com args=[]
+packages installed: 30
+-- URLs Composer requested (host + first path segment, count):
+  60 https://api.github.com/repos
+  42 https://codeload.github.com/sebastianbergmann
+   4 https://codeload.github.com/phar-io
+   2 https://repo.packagist.org/packages.json
+   2 https://repo.packagist.org/lists
+   2 https://codeload.github.com/theseer
+   2 https://codeload.github.com/symfony
+   2 https://codeload.github.com/staabm
+   2 https://codeload.github.com/Seldaek
+   2 https://codeload.github.com/php-fig
+   2 https://codeload.github.com/nikic
+   2 https://codeload.github.com/myclabs
+   1 https://packagist.org/downloads
+-- api.github.com requests: 30
+-- sandbox network decisions:
+   8 Allowed by config rule: codeload.github.com:443
+   8 Allowed by config rule: api.github.com:443
+   1 No matching config rule, denying: packagist.org:443
+   1 Allowed by config rule: repo.packagist.org:443
+
+===== t7 hosts=codeload.github.com,api.github.com args=[]
+packages installed: 30
+-- URLs Composer requested (host + first path segment, count):
+  60 https://api.github.com/repos
+  42 https://codeload.github.com/sebastianbergmann
+   5 https://repo.packagist.org/packages.json
+   4 https://codeload.github.com/phar-io
+   2 https://codeload.github.com/theseer
+   2 https://codeload.github.com/symfony
+   2 https://codeload.github.com/staabm
+   2 https://codeload.github.com/Seldaek
+   2 https://codeload.github.com/php-fig
+   2 https://codeload.github.com/nikic
+   2 https://codeload.github.com/myclabs
+   1 https://packagist.org/downloads
+-- api.github.com requests: 30
+-- sandbox network decisions:
+   8 Allowed by config rule: codeload.github.com:443
+   8 Allowed by config rule: api.github.com:443
+   4 No matching config rule, denying: repo.packagist.org:443
+   1 No matching config rule, denying: packagist.org:443
+
+===== t8 hosts=(none) cache pre-filled from t4's job
+-- URLs Composer requested (host + first path segment, count):
+   5 https://repo.packagist.org/lists
+   1 https://repo.packagist.org
+   1 https://packagist.org/downloads
+-- api.github.com requests: 0
+-- sandbox network decisions:
+   4 No matching config rule, denying: repo.packagist.org:443
+   1 No matching config rule, denying: packagist.org:443
+packages installed: 30; 'Loading from cache' lines: 62
+
+===== GitHub core rate limit (unauthenticated, this IP), GET /rate_limit from the host
+before t5: used 0 / 60; after t5: used 0; after t4 (30 zipball 302s): used 0
+one zipball request by hand: HTTP/2 302 -> codeload.github.com/<owner>/<repo>/legacy.zip/<ref>; x-ratelimit-resource: core, x-ratelimit-used: 0

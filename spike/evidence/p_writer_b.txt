@@ -1,0 +1,68 @@
+job=<job>
+{"claude_code_version":"2.1.304","plugins":[],"mcp_servers":[]}
+{"subtype":"success","is_error":false,"num_turns":2,"result":"DONE"}
+{"status":"allowed","resetsAt":1792685400,"rateLimitType":"five_hour","overageStatus":"rejected","overageDisabledReason":"out_of_credits","isUsingOverage":false,"unifiedWindows":{"five_hour":{"utilization":0.09,"resetsAt":1792685400},"seven_day":{"utilization":0.12,"resetsAt":1792944000}}}
+--- probe output (<job>/probe-claude-b.txt):
+== environment
+PATH has Herd bin                              yes
+PATH                                           ~/Library/Application Support/Herd/bin:~/.local/bin:~/.bun/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
+php                                            ~/Library/Application Support/Herd/bin/php
+composer                                       ~/Library/Application Support/Herd/bin/composer
+HERD_PHP_84_INI_SCAN_DIR set                   no
+COMPOSER_HOME                                  <job>/composer-home
+COMPOSER_CACHE_DIR                             <job>/composer-home/cache
+TMPDIR                                         /tmp/claude-501
+proxy env vars                                 6
+== Herd php/composer
+php -r                                         8.4.22
+php ini parsed                                 (none)
+composer --version                             Composer version 2.10.1 2026-06-04 10:25:59
+== composer install (prefer-dist, lockfile)
+composer install exit                          0
+packages installed                             30
+dist downloads via api.github.com              30
+-- hosts Composer requested (count):
+  60 https://codeload.github.com
+  60 https://api.github.com
+   4 https://repo.packagist.org
+   2 https://packagist.org
+-- failures:
+== writes
+write job dir                                  ALLOWED
+write source repo                              DENIED
+write $HOME                                    DENIED
+write ~/.gaffer                                DENIED
+write ~/.composer                              DENIED
+== credential reads (one byte, discarded)
+read canary                                    DENIED
+stat canary                                    DENIED
+read ~/.ssh/id_ed25519                         DENIED
+read ~/.ssh/config                             DENIED
+read ~/.config/gh/hosts.yml                    DENIED
+read ~/Library/Keychains/login.keychain-db     DENIED
+read ~/.claude/.credentials.json               DENIED
+read ~/.claude.json                            DENIED
+read ~/.codex/auth.json                        DENIED
+read ~/.gaffer/claude/.credentials.json        DENIED
+read ~/.gaffer/codex/auth.json                 DENIED
+read ~/.composer/latest.phar                   DENIED
+read ~/Library/Application Support/Herd/config/valet/CA/LaravelValetCASelfSigned.key DENIED
+read job file                                  ALLOWED
+read Herd php.ini                              ALLOWED
+== network
+GET https://repo.packagist.org/packages.json   200
+GET https://api.github.com/zen                 200
+GET https://codeload.github.com/               301
+GET https://example.com/                       000
+GET https://github.com/                        000
+GET https://objects.githubusercontent.com/     000
+GET https://pypi.org/simple/pip/               000
+git ls-remote origin (fake GitHub)             DENIED
+git ls-remote github.com/Seldaek/monolog       DENIED
+== composer install --prefer-source (fresh clone in job)
+composer install --prefer-source exit          0
+  60   sandbox proxy: github.com:22: 403 user denied
+  60   fatal: unable to access 'https://github.com/<pkg> CONNECT tunnel failed, response 403
+  30 Failed: [RuntimeException] Failed to clone https://github.com/<pkg> via https, ssh protocols, aborting.
+--- settings.json
+{"permissions":["WebFetch","WebSearch","mcp__claude_ai_Linear","Read(/~/.ssh/**)","Read(/~/.config/gh/**)","Read(/~/.aws/**)","Read(/~/Library/Keychains/**)","Read(/~/.claude/**)","Read(/~/.codex/**)","Read(/~/.gaffer/**)","Read(/~/.claude.json/**)","Read(/~/.composer/**)","Read(/~/.config/composer/**)","Read(/~/Library/Application Support/Herd/config/valet/**)","Read(/~/.gaffer-spike-canary/**)"],"sandbox":{"enabled":true,"failIfUnavailable":true,"autoAllowBashIfSandboxed":true,"allowUnsandboxedCommands":false,"filesystem":{"allowWrite":["<job>"],"denyRead":["~/.ssh","~/.config/gh","~/.aws","~/Library/Keychains","~/.claude","~/.codex","~/.gaffer","~/.claude.json","~/.composer","~/.config/composer","~/Library/Application Support/Herd/config/valet","~/.gaffer-spike-canary"]},"network":{"allowedDomains":["repo.packagist.org","packagist.org","api.github.com","codeload.github.com"]}}}

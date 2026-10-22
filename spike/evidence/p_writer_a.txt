@@ -1,0 +1,34 @@
+job=<job>
+{"claude_code_version":"2.1.304","plugins":[],"mcp_servers":[]}
+{"subtype":"success","is_error":false,"num_turns":2,"result":"DONE"}
+{"status":"allowed","resetsAt":1792685400,"rateLimitType":"five_hour","overageStatus":"rejected","overageDisabledReason":"out_of_credits","isUsingOverage":false,"unifiedWindows":{"five_hour":{"utilization":0.09,"resetsAt":1792685400},"seven_day":{"utilization":0.12,"resetsAt":1792944000}}}
+--- probe output (<job>/probe-claude-a.txt):
+== environment
+PATH has Herd bin                              yes
+PATH                                           ~/Library/Application Support/Herd/bin:~/.local/bin:~/.bun/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
+php                                            ~/Library/Application Support/Herd/bin/php
+composer                                       ~/Library/Application Support/Herd/bin/composer
+HERD_PHP_84_INI_SCAN_DIR set                   no
+COMPOSER_HOME                                  <job>/composer-home
+COMPOSER_CACHE_DIR                             <job>/composer-home/cache
+TMPDIR                                         /tmp/claude-501
+proxy env vars                                 6
+== Herd php/composer
+php -r                                         8.4.22
+php ini parsed                                 (none)
+composer --version                             Composer version 2.10.1 2026-06-04 10:25:59
+== composer install (prefer-dist, lockfile)
+composer install exit                          100
+packages installed                             0
+dist downloads via api.github.com              30
+-- hosts Composer requested (count):
+ 151 https://api.github.com
+   4 https://repo.packagist.org
+-- failures:
+   1   ball/<sha>: CONNECT tunnel failed, respo  
+   1   [Composer\Downloader\TransportException (100)]                               
+   1     Failed to download theseer/tokenizer from dist: curl error 7 while downloading https://api.github.com/repos/theseer/tokenizer/zipball/<sha>: CONNECT tunnel failed, response 403
+   1     Failed to download symfony/polyfill-ctype from dist: curl error 7 while downloading https://api.github.com/repos/symfony/polyfill-ctype/zipball/<sha>: CONNECT tunnel failed, response 403
+   1     Failed to download staabm/side-effects-detector from dist: curl error 7 while downloading https://api.github.com/repos/staabm/side-effects-detector/zipball/<sha>: CONNECT tunnel failed, response 403
+--- settings.json
+{"permissions":["WebFetch","WebSearch","mcp__claude_ai_Linear","Read(/~/.ssh/**)","Read(/~/.config/gh/**)","Read(/~/.aws/**)","Read(/~/Library/Keychains/**)","Read(/~/.claude/**)","Read(/~/.codex/**)","Read(/~/.gaffer/**)","Read(/~/.claude.json/**)","Read(/~/.composer/**)","Read(/~/.config/composer/**)","Read(/~/Library/Application Support/Herd/config/valet/**)","Read(/~/.gaffer-spike-canary/**)"],"sandbox":{"enabled":true,"failIfUnavailable":true,"autoAllowBashIfSandboxed":true,"allowUnsandboxedCommands":false,"filesystem":{"allowWrite":["<job>"],"denyRead":["~/.ssh","~/.config/gh","~/.aws","~/Library/Keychains","~/.claude","~/.codex","~/.gaffer","~/.claude.json","~/.composer","~/.config/composer","~/Library/Application Support/Herd/config/valet","~/.gaffer-spike-canary"]},"network":{"allowedDomains":["repo.packagist.org","packagist.org"]}}}

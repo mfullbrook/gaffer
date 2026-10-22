@@ -1,0 +1,46 @@
+# Herd php/composer under sandbox-runtime, no hosts; macOS sandbox denials from 'log stream' (sender Sandbox), php84 only
+== noini (env -i: Herd ini not loaded)
+Loaded Configuration File => (none)
+Additional .ini files parsed => (none)
+auto_prepend_file => no value => no value
+openssl.cafile => no value => no value
+0
+2
+Composer version 2.10.1 2026-06-04 10:25:59
+- No license specified, it is recommended to do so. For closed-source software you may use "proprietary" as license.
+200
+-- denials:
+   9 deny(1) mach-lookup com.apple.diagnosticd
+   4 deny(1) mach-lookup com.apple.SystemConfiguration.configd
+   3 deny(1) sysctl-read kern.iossupportversion
+== ini (HERD_PHP_84_INI_SCAN_DIR set, as in ~/.zshrc)
+Loaded Configuration File => (none)
+Additional .ini files parsed => ~/Library/Application Support/Herd/config/php/84/php.ini
+auto_prepend_file => /Applications/Herd.app/Contents/Resources/valet/dump-loader.php => /Applications/Herd.app/Contents/Resources/valet/dump-loader.php
+openssl.cafile => ~/Library/Application Support/Herd/config/php/cacert.pem => ~/Library/Application Support/Herd/config/php/cacert.pem
+1
+2
+Composer version 2.10.1 2026-06-04 10:25:59
+- No license specified, it is recommended to do so. For closed-source software you may use "proprietary" as license.
+200
+-- denials:
+  10 deny(1) mach-lookup com.apple.diagnosticd
+   5 deny(1) sysctl-read kern.iossupportversion
+   5 deny(1) mach-lookup com.apple.SystemConfiguration.configd
+== composer diagnose (no hosts)
+Checking pubkeys: FAIL
+Checking Composer version: FAIL
+Checking Composer and its dependencies for vulnerabilities: Failed performing audit: curl error 7 while downloading https://packagist.org/api/security-advisories/: CONNECT tunnel failed, response 403
+OpenSSL version: OpenSSL 3.6.2 7 Apr 2026
+curl version: 8.20.0 libz 1.3.2 brotli brotli/1.2.0 zstd supported ssl OpenSSL/3.6.2 HTTP 1.0, 1.1, 2
+zip: extension present, unzip present, 7-Zip not available
+Checking composer.json: WARNING
+Checking composer.lock: OK
+Checking platform settings: OK
+Checking git settings: OK git version 2.50.1
+Checking http connectivity to packagist: FAIL
+Checking https connectivity to packagist: FAIL
+Checking HTTP proxy with http: FAIL
+Checking HTTP proxy with https: FAIL
+Checking github.com rate limit: FAIL
+Checking disk free space: OK

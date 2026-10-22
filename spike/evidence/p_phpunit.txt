@@ -1,0 +1,72 @@
+# PHPUnit 11 under codex sandbox -P gaffer_test (spike/p_phpunit.sh), Herd PHP 8.4.22
+
+===== shapes
+worktree install (no network, warm cache): exit=0 packages=30
+phpunit exit=2 (variant=shapes)
++'HI!'
+
+<job>/verify-shapes/tests/ShapesTest.php:11
+
+ERRORS!
+Tests: 10, Assertions: 3, Errors: 5, Failures: 1, Skipped: 1, Incomplete: 1.
+testsuite name='Toy\\Tests\\ShapesTest' file='<job>/verify-shapes/tests/ShapesTest.php' tests=9 failures=1 errors=5 skipped=2
+testsuite name='Toy\\Tests\\StringsTest' file='<job>/verify-shapes/tests/StringsTest.php' tests=1 failures=0 errors=0 skipped=0
+  Toy\Tests\ShapesTest::testPasses  classname='Toy.Tests.ShapesTest'  -> passed
+  Toy\Tests\ShapesTest::testAssertionFailure  classname='Toy.Tests.ShapesTest'  -> failure type='PHPUnit\\Framework\\ExpectationFailedException'  | Failed asserting that two strings are identical.
+  Toy\Tests\ShapesTest::testRuntimeException  classname='Toy.Tests.ShapesTest'  -> error type='RuntimeException'  | RuntimeException: boom
+  Toy\Tests\ShapesTest::testTypeError  classname='Toy.Tests.ShapesTest'  -> error type='TypeError'  | TypeError: Toy\Strings::shout(): Argument #1 ($s) must be of type string, null given, called in /private/var/f
+  Toy\Tests\ShapesTest::testMissingClass  classname='Toy.Tests.ShapesTest'  -> error type='Error'  | Error: Class "Toy\WordCounter" not found
+  Toy\Tests\ShapesTest::testMissingFunction  classname='Toy.Tests.ShapesTest'  -> error type='Error'  | Error: Call to undefined function Toy\word_count()
+  Toy\Tests\ShapesTest::testTypoUndefinedMethod  classname='Toy.Tests.ShapesTest'  -> error type='Error'  | Error: Call to undefined method Toy\Strings::shuot()
+  Toy\Tests\ShapesTest::testSkipped  classname='Toy.Tests.ShapesTest'  -> skipped
+  Toy\Tests\ShapesTest::testIncomplete  classname='Toy.Tests.ShapesTest'  -> skipped
+  Toy\Tests\StringsTest::testShoutUppercasesAndAddsBang  classname='Toy.Tests.StringsTest'  -> passed
+
+===== missingbase
+worktree install (no network, warm cache): exit=0 packages=30
+phpunit exit=255 (variant=missingbase)
+#4 <job>/verify-missingbase/vendor/phpunit/phpunit/src/TextUI/Configuration/TestSuiteBuilder.php(75): PHPUnit\TextUI\XmlConfiguration\TestSuiteMapper->map('/private/var/fo...', Object(PHPUnit\TextUI\Configuration\TestSuiteCollection), '', '')
+#5 <job>/verify-missingbase/vendor/phpunit/phpunit/src/TextUI/Application.php(412): PHPUnit\TextUI\Configuration\TestSuiteBuilder->build(Object(PHPUnit\TextUI\Configuration\Configuration))
+#6 <job>/verify-missingbase/vendor/phpunit/phpunit/src/TextUI/Application.php(182): PHPUnit\TextUI\Application->buildTestSuite(Object(PHPUnit\TextUI\Configuration\Configuration))
+#7 <job>/verify-missingbase/vendor/phpunit/phpunit/phpunit(104): PHPUnit\TextUI\Application->run(Array)
+#8 <job>/verify-missingbase/vendor/bin/phpunit(122): include('/private/var/fo...')
+#9 {main}
+JUnit file: missing or empty
+-- PHPUnit output head:
+An error occurred inside PHPUnit.
+Message:  Class "Toy\Testing\WordCase" not found
+Location: <job>/verify-missingbase/tests/MissingBaseTest.php:5
+
+===== parse
+worktree install (no network, warm cache): exit=0 packages=30
+phpunit exit=255 (variant=parse)
+#3 <job>/verify-parse/vendor/phpunit/phpunit/src/TextUI/Configuration/TestSuiteBuilder.php(75): PHPUnit\TextUI\XmlConfiguration\TestSuiteMapper->map('/private/var/fo...', Object(PHPUnit\TextUI\Configuration\TestSuiteCollection), '', '')
+#4 <job>/verify-parse/vendor/phpunit/phpunit/src/TextUI/Application.php(412): PHPUnit\TextUI\Configuration\TestSuiteBuilder->build(Object(PHPUnit\TextUI\Configuration\Configuration))
+#5 <job>/verify-parse/vendor/phpunit/phpunit/src/TextUI/Application.php(182): PHPUnit\TextUI\Application->buildTestSuite(Object(PHPUnit\TextUI\Configuration\Configuration))
+#6 <job>/verify-parse/vendor/phpunit/phpunit/phpunit(104): PHPUnit\TextUI\Application->run(Array)
+#7 <job>/verify-parse/vendor/bin/phpunit(122): include('/private/var/fo...')
+#8 {main}
+JUnit file: missing or empty
+-- PHPUnit output head:
+An error occurred inside PHPUnit.
+Message:  syntax error, unexpected token "}"
+Location: <job>/verify-parse/tests/ParseErrorTest.php:4
+
+===== raw JUnit testcase (shapes)
+        <testcase name="testMissingClass" file="<job>/verify-shapes/tests/ShapesTest.php" line="14" class="Toy\Tests\ShapesTest" classname="Toy.Tests.ShapesTest" assertions="0" time="0.000235">
+          <error type="Error">Toy\Tests\ShapesTest::testMissingClass
+Error: Class "Toy\WordCounter" not found
+
+        <testcase name="testIncomplete" file="<job>/verify-shapes/tests/ShapesTest.php" line="18" class="Toy\Tests\ShapesTest" classname="Toy.Tests.ShapesTest" assertions="0" time="0.000324">
+          <skipped/>
+
+===== per-file runs with MissingBaseTest.php present
+phpunit tests/ShapesTest.php       -> exit 2, 9 testcases in JUnit
+phpunit tests/MissingBaseTest.php  -> exit 255, no JUnit file
+
+===== Herd php under gaffer_test
+php read canary              DENIED
+php read ~/.ssh/config       DENIED
+php GET repo.packagist.org   BLOCKED
+php write job dir            ALLOWED
+php write $HOME              DENIED

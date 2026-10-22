@@ -1,0 +1,11 @@
+# composer update --no-install -vvv under srt 0.0.79, allowedDomains repo.packagist.org,packagist.org
+exit=0
+-- URLs Composer requested (host + first path segment, count):
+  60 https://repo.packagist.org/p2
+  30 https://repo.packagist.org
+   2 https://repo.packagist.org/packages.json
+-- api.github.com requests: 0
+-- sandbox network decisions:
+   1 Allowed by config rule: repo.packagist.org:443
+-- composer.lock dist hosts:
+api.github.com 30
