@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from gaffer import children as ch
+from gaffer import doctor as doctor_mod
 from gaffer import runner as rn
 from gaffer import store as st
 from gaffer import workspace as ws_mod
@@ -205,6 +206,9 @@ class FakeChildren:
     def __init__(self, world: World):
         self.world = world
         self.preflight_error: list[str] | None = None
+        self.versions = ("2.1.304 (Claude Code)", "codex-cli 0.160.0")  # what preflight reports
+        self.doctor_failures: dict[str, str] = {}  # probe name -> evidence: the next doctor runs fail them
+        self.doctor_calls = 0
         self.tester_outputs: list[Any] = []  # each: dict (raw output), "error", Crash, LimitEvent
         self.writer_actions: list[Callable[[WriterCall], Any]] = []  # launch/resume actions in order
         self.default_implement = implement_good
@@ -231,10 +235,20 @@ class FakeChildren:
     def preflight(self, repo):
         if self.preflight_error:
             raise ch.PreflightError(self.preflight_error)
-        return ch.PreflightReport(claude_version="2.1.304 (Claude Code)", codex_version="codex-cli 0.160.0",
+        return ch.PreflightReport(claude_version=self.versions[0], codex_version=self.versions[1],
                                   gitleaks_version="8.30.1", srt_version=None,
                                   claude_auth={"loggedIn": True, "authMethod": "claude.ai", "apiProvider": "firstParty"},
                                   codex_login="Logged in using ChatGPT", mcp_servers=())
+
+    # doctor (R18): every probe passes unless doctor_failures names it
+    def doctor(self):
+        self.doctor_calls += 1
+        probes = tuple(doctor_mod.ProbeResult(n, n not in self.doctor_failures, self.doctor_failures.get(n, "ok"),
+                                              "" if n not in self.doctor_failures else "fix it")
+                       for n in doctor_mod.PROBES)
+        return doctor_mod.DoctorReport(claude_version=self.versions[0], codex_version=self.versions[1],
+                                       srt_version=ch.SRT_VERSION, srt_installed=ch.SRT_VERSION, config="fake",
+                                       probes=probes, deny_paths=doctor_mod.deny_list(self.world.config))
 
     # Codex
     def run_tester(self, jobs, prompt, *, on_spawn):

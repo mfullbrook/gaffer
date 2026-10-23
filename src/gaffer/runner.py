@@ -56,6 +56,7 @@ from typing import Any, Protocol, TextIO
 
 from gaffer import children as ch
 from gaffer import config as gconfig
+from gaffer import doctor as doctor_mod
 from gaffer import store as st
 from gaffer import workspace as ws_mod
 from gaffer.config import Config, RepoConfig, Secret
@@ -306,6 +307,7 @@ class ChildrenPort(Protocol):
     """The slice of children.py the runner uses. RealChildren binds it to the config."""
 
     def preflight(self, repo: RepoConfig) -> ch.PreflightReport: ...
+    def doctor(self) -> doctor_mod.DoctorReport: ...
     def run_tester(self, jobs: ch.JobDirs, prompt: str, *, on_spawn: OnSpawn) -> ch.TesterRun: ...
     def run_reviewer(self, jobs: ch.JobDirs, prompt: str, *, on_spawn: OnSpawn) -> ch.ReviewRun: ...
     # children merges the persistent plugin block list into every launch and resume itself (R31).
@@ -329,6 +331,9 @@ class RealChildren:
 
     def preflight(self, repo):
         return ch.preflight(self.cfg, repo, paths=self.paths)
+
+    def doctor(self):
+        return doctor_mod.run_doctor(self.cfg, paths=self.paths)
 
     def run_tester(self, jobs, prompt, *, on_spawn):
         return ch.run_tester(self.cfg, jobs, prompt, paths=self.paths, on_spawn=on_spawn)
@@ -579,6 +584,7 @@ class Runner:
         except ch.PreflightError as e:
             raise Refused(str(e)) from None
         self._preflight = report
+        self._doctor(report)
 
         if job is not None and job.state == "CLOSED" and opts.fresh:
             store.archive_job(job.id)
@@ -602,6 +608,22 @@ class Runner:
             store.log_event(job.id, "continue", {"head": job.head_sha})
             job = store.set_state(job.id, "ROUND")
         return self._drive(job, repo)
+
+    def _doctor(self, report: ch.PreflightReport) -> None:
+        """R18 decision A, as amended by R31: rerun the doctor probe suite when the Claude or Codex
+        version, or the pinned sandbox-runtime version, differs from the last pass (and, conservatively,
+        when the deny list or probe suite does: doctor.stale); refuse (exit 4) naming the failing probes
+        if it fails. Runs before any job record or child exists."""
+        store = self.store
+        reason = doctor_mod.stale(store, self.cfg, report.claude_version, report.codex_version)
+        if reason is None:
+            return
+        self._say(f"gaffer: running doctor (R18): {reason}.")
+        result = self.children.doctor()
+        doctor_mod.record(store, result)
+        self._say(doctor_mod.format_report(result))
+        if not result.passed:
+            raise Refused(doctor_mod.refusal(result) + " Then rerun `gaffer doctor`, or this command.")
 
     def _check_flags(self, job: st.Job | None, opts: Options) -> None:
         if opts.fresh and (opts.cont or opts.adopt_head):
@@ -2019,11 +2041,57 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--more-cycles", type=int, default=0, metavar="N", help="grant N more repair cycles, recorded (R8)")
     run.add_argument("--continue", dest="cont", action="store_true", help="process feedback that arrived after READY (R8)")
     run.add_argument("--fresh", action="store_true", help="after CLOSED: archive the job and start gaffer/<key>-2 (R8)")
+    doc = sub.add_parser("doctor", help="probe the isolation controls on the installed CLIs (R18)")
+    doc.add_argument("--config", type=Path, metavar="PATH",
+                     help="gaffer.toml to probe under (default: ~/.gaffer/gaffer.toml if it exists, else built-in defaults)")
     return p
+
+
+def doctor_main(config_path: Path | None, *, home: Path, out: TextIO = sys.stdout,
+                run: Callable[..., doctor_mod.DoctorReport] = doctor_mod.run_doctor) -> int:
+    """`gaffer doctor`: run every probe now, record the result in state.db, exit 0 on a pass and 4
+    on any failure (R18). Without --config and without ~/.gaffer/gaffer.toml, it probes under the
+    built-in defaults (deny list without a vault, a temp job root); an invalid config is exit 4."""
+    path = config_path or gconfig.default_config_path(home)
+    cfg: Config | None = None
+    try:
+        if config_path is not None or path.exists():
+            cfg = gconfig.load_config(path, home=home)
+        store = st.Store(st.default_db_path(home))
+    except (gconfig.ConfigError, st.StoreError) as e:
+        print(f"gaffer: {e}", file=out)
+        return getattr(e, "exit_code", EXIT_ERROR)
+    if cfg is None:
+        print(f"gaffer doctor: no {path}; probing under built-in defaults (the vault entry is a stand-in dir).", file=out)
+    try:
+        # One gaffer at a time: doctor shares children's quota and ~/.gaffer with `gaffer run` (R9).
+        fd = _flock(run_lock_path(home), "the run lock", "a gaffer run is in progress")
+        try:
+            report = run(cfg, home=home)
+            doctor_mod.record(store, report)
+        finally:
+            with contextlib.suppress(OSError):
+                fcntl.flock(fd, fcntl.LOCK_UN)
+            with contextlib.suppress(OSError):
+                os.close(fd)
+    except Refused as e:
+        print(f"gaffer: refused: {e}", file=out)
+        return EXIT_REFUSED
+    except (ch.ChildError, st.StoreError) as e:
+        code = getattr(e, "exit_code", EXIT_ERROR)
+        print(f"gaffer: {'refused' if code == EXIT_REFUSED else 'error'}: {e}", file=out)
+        return code
+    finally:
+        store.close()
+    print(doctor_mod.format_report(report), file=out)
+    print(f"gaffer doctor: recorded in {st.default_db_path(home)}.", file=out)
+    return EXIT_READY if report.passed else EXIT_REFUSED
 
 
 def main(argv: Sequence[str] | None = None, *, home: Path | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.command == "doctor":
+        return doctor_main(args.config, home=home or Path.home())
     if args.more_cycles < 0:
         print("gaffer: --more-cycles needs a positive N (refused)", file=sys.stderr)
         return EXIT_REFUSED
