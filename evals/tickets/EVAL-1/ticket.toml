@@ -1,0 +1,35 @@
+# R19 eval ticket 1: a bug fix. Stands in for a Linear issue; gaffer eval reads it instead of Linear.
+key = "EVAL-1"
+kind = "bug_fix"
+title = "word_count miscounts text with extra whitespace"
+description = """
+`toy.textutil.word_count` splits on single spaces, so repeated spaces, leading or trailing
+spaces and the empty string give the wrong count: `word_count("a  b")` returns 3 and
+`word_count("")` returns 1.
+
+Words are runs of non-whitespace characters.
+
+## Acceptance criteria
+
+- [ ] `word_count("a  b")` returns 2 (repeated spaces between words)
+- [ ] `word_count("  leading and trailing  ")` returns 3
+- [ ] `word_count("")` returns 0 and `word_count("   ")` returns 0
+- [ ] `word_count("one two three")` still returns 3
+"""
+
+# The one seeded feedback item resumed through address.md, as a CodeRabbit inline comment.
+[feedback]
+source = "coderabbit"
+path = "toy/textutil.py"
+line = 11
+body = """
+**Tabs and newlines are whitespace too.** `word_count("a\\tb\\nc")` must return 3: words are
+separated by any whitespace, not just spaces. Please make sure the fix covers tabs and newlines.
+"""
+
+[expected]
+# How every acceptance test must be red on the base: "assertion" or "missing_symbol".
+red_first = "assertion"
+# Dispositions that count as a correct answer to the seeded item. A fix built on str.split()
+# already handles tabs, so declining it as already handled is as correct as fixing it.
+address = ["fixed", "declined"]

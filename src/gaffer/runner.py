@@ -416,6 +416,9 @@ class Deps:
     remote_url: Callable[[RepoConfig], str] | None = None  # tests point origin at a bare repo
     rng: random.Random = field(default_factory=random.Random)
     out: TextIO = field(default_factory=lambda: sys.stdout)
+    # Where per-job state dirs (child logs, report.md) live; None is ~/.gaffer/jobs. `gaffer eval`
+    # keeps each eval run's jobs apart under ~/.gaffer/evals (still denied to children, R28).
+    state_root: Path | None = None
 
 
 # --- locks (R9) ---------------------------------------------------------------------
@@ -486,6 +489,27 @@ def _stamp_lock(fd: int, key: str) -> None:
     os.ftruncate(fd, 0)
     os.lseek(fd, 0, os.SEEK_SET)
     os.write(fd, f"{os.getpid()} {key}\n".encode())
+
+
+# --- doctor gate (R18) ------------------------------------------------------------------
+
+
+def doctor_gate(store: st.Store, cfg: Config | None, report: ch.PreflightReport,
+                run: Callable[[], doctor_mod.DoctorReport], say: Callable[[str], None]) -> None:
+    """R18 decision A, as amended by R31: rerun the doctor probe suite when the Claude or Codex
+    version, or the pinned sandbox-runtime version, differs from the last pass (and, conservatively,
+    when the deny list or probe suite does: doctor.stale); refuse (exit 4) naming the failing probes
+    if it fails. Runs before any job record or child exists. `gaffer run` and `gaffer eval` share it:
+    cfg is the config doctor proves (None: built-in defaults) and store holds the doctor runs."""
+    reason = doctor_mod.stale(store, cfg, report.claude_version, report.codex_version)
+    if reason is None:
+        return
+    say(f"gaffer: running doctor (R18): {reason}.")
+    result = run()
+    doctor_mod.record(store, result)
+    say(doctor_mod.format_report(result))
+    if not result.passed:
+        raise Refused(doctor_mod.refusal(result) + " Then rerun `gaffer doctor`, or this command.")
 
 
 # --- helpers ---------------------------------------------------------------------------
@@ -610,20 +634,7 @@ class Runner:
         return self._drive(job, repo)
 
     def _doctor(self, report: ch.PreflightReport) -> None:
-        """R18 decision A, as amended by R31: rerun the doctor probe suite when the Claude or Codex
-        version, or the pinned sandbox-runtime version, differs from the last pass (and, conservatively,
-        when the deny list or probe suite does: doctor.stale); refuse (exit 4) naming the failing probes
-        if it fails. Runs before any job record or child exists."""
-        store = self.store
-        reason = doctor_mod.stale(store, self.cfg, report.claude_version, report.codex_version)
-        if reason is None:
-            return
-        self._say(f"gaffer: running doctor (R18): {reason}.")
-        result = self.children.doctor()
-        doctor_mod.record(store, result)
-        self._say(doctor_mod.format_report(result))
-        if not result.passed:
-            raise Refused(doctor_mod.refusal(result) + " Then rerun `gaffer doctor`, or this command.")
+        doctor_gate(self.store, self.cfg, report, self.children.doctor, self._say)
 
     def _check_flags(self, job: st.Job | None, opts: Options) -> None:
         if opts.fresh and (opts.cont or opts.adopt_head):
@@ -801,12 +812,12 @@ class Runner:
             self.store.log_event(job.id, "git_config_restored", {"note": ws.config_restores.pop(0)})
 
     def _jobs(self, job: st.Job, ws: ws_mod.Workspace) -> ch.JobDirs:
-        state = gaffer_dir(self.d.home) / "jobs" / job_marker(job)
+        state = self._state_dir(job)
         state.mkdir(mode=0o700, parents=True, exist_ok=True)
         return ch.JobDirs(job_dir=ws.root, clone=ws.clone, state_dir=state)
 
     def _state_dir(self, job: st.Job) -> Path:
-        return gaffer_dir(self.d.home) / "jobs" / job_marker(job)
+        return (self.d.state_root or gaffer_dir(self.d.home) / "jobs") / job_marker(job)
 
     def _install_runner(self, job: st.Job, ws: ws_mod.Workspace, step: str) -> ws_mod.InstallRunner:
         """ADAPTER: workspace's InstallRunner over children.run_install_command.
@@ -2044,6 +2055,13 @@ def build_parser() -> argparse.ArgumentParser:
     doc = sub.add_parser("doctor", help="probe the isolation controls on the installed CLIs (R18)")
     doc.add_argument("--config", type=Path, metavar="PATH",
                      help="gaffer.toml to probe under (default: ~/.gaffer/gaffer.toml if it exists, else built-in defaults)")
+    ev = sub.add_parser("eval", help="run the three toy tickets through the prompts and compare with the baseline (R19)")
+    ev.add_argument("--config", type=Path, metavar="PATH",
+                    help="gaffer.toml for models, vault and allowed MCP (default: ~/.gaffer/gaffer.toml if it exists, "
+                         "else built-in defaults); its repos are not used")
+    ev_mode = ev.add_mutually_exclusive_group()
+    ev_mode.add_argument("--save-baseline", action="store_true", help="run, then store this run as the new baseline")
+    ev_mode.add_argument("--promote", metavar="RUN_ID", help="store an earlier complete run as the baseline (no children)")
     return p
 
 
@@ -2092,6 +2110,11 @@ def main(argv: Sequence[str] | None = None, *, home: Path | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "doctor":
         return doctor_main(args.config, home=home or Path.home())
+    if args.command == "eval":
+        from gaffer import prompt_eval  # imports this module
+
+        return prompt_eval.eval_main(args.config, home=home or Path.home(), save_baseline=args.save_baseline,
+                                     promote=args.promote)
     if args.more_cycles < 0:
         print("gaffer: --more-cycles needs a positive N (refused)", file=sys.stderr)
         return EXIT_REFUSED

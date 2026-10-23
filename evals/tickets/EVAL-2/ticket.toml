@@ -1,0 +1,28 @@
+# R19 eval ticket 2: a new feature whose symbol doesn't exist yet.
+key = "EVAL-2"
+kind = "feature_missing_symbol"
+title = "Add initials() to toy.textutil"
+description = """
+Add a function `initials(name: str) -> str` to `toy/textutil.py` that returns the upper-case
+first letter of each word in a name. Words are separated by whitespace.
+
+## Acceptance criteria
+
+- [ ] `initials("ada lovelace")` returns `"AL"`
+- [ ] `initials("  grace   brewster hopper ")` returns `"GBH"`
+- [ ] `initials("")` returns `""`
+- [ ] `shout` and `word_count` keep working as before
+"""
+
+[feedback]
+source = "coderabbit"
+path = "toy/textutil.py"
+line = 1
+body = """
+**Hyphenated names.** `initials("jean-paul sartre")` returns `"JS"`, but each hyphen-separated
+part of a name is a name in its own right: it should return `"JPS"`.
+"""
+
+[expected]
+red_first = "missing_symbol"
+address = ["fixed"]

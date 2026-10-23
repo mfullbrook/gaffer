@@ -1,0 +1,31 @@
+# R19 eval ticket 3: a dependency add, installed from PyPI through the allowlisted install path (R14).
+key = "EVAL-3"
+kind = "dependency_add"
+title = "Add human_size() using the humanize package"
+description = """
+Add a new module `toy/sizes.py` with `human_size(n_bytes: int) -> str`, which formats a byte
+count for people using the `humanize` package from PyPI: return `humanize.naturalsize(n_bytes)`
+(decimal units). Declare `humanize` as a dependency in `requirements.txt`.
+
+## Acceptance criteria
+
+- [ ] `human_size(0)` returns `"0 Bytes"` and `human_size(1)` returns `"1 Byte"`
+- [ ] `human_size(1500)` returns `"1.5 kB"`
+- [ ] `human_size(1_000_000)` returns `"1.0 MB"`
+- [ ] `humanize` is declared in `requirements.txt`
+"""
+
+[feedback]
+source = "coderabbit"
+path = "toy/sizes.py"
+line = 1
+body = """
+**Negative sizes.** A byte count can't be negative, but `human_size(-1500)` returns `"-1.5 kB"`.
+Raise `ValueError` for a negative `n_bytes` instead.
+"""
+
+[expected]
+red_first = "missing_symbol"
+address = ["fixed"]
+# The final head's requirements.txt must declare this package.
+dependency = "humanize"
