@@ -2385,7 +2385,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: R8, R9, R24, D2
   - Files: src/gaffer/runner.py, tests/test_runner_states.py, tests/test_rerun_flags.py, tests/test_locks.py
   - Verify: `uv run pytest tests/test_runner_states.py tests/test_rerun_flags.py tests/test_locks.py`
-- [ ] **T10 (P2, human: ~1 day / CC: ~45 min)** doctor: auto-run probe suite on CLI version change
+- [x] **T10 (P2, human: ~1 day / CC: ~45 min)** doctor: auto-run probe suite on CLI version change
   - Surfaced by: R18
   - Files: src/gaffer/children.py, tests/test_doctor.py
   - Verify: `uv run pytest tests/test_doctor.py` plus one live `gaffer doctor`
