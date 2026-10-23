@@ -203,6 +203,7 @@ def test_unchanged_second_run_passes(world):
     assert code == pe.EXIT_PASS, out
     assert f"compared with baseline {first}" in out
     assert "prompts changed since the baseline: none" in out
+    assert "eval fixtures changed since the baseline: none" in out
     assert "0 regression(s), 0 warning(s)" in out
     assert world.baseline()["run_id"] == first  # not promoted without --save-baseline
     assert len(world.runs()) == 2
@@ -546,6 +547,35 @@ def test_compare_reports_prompt_cli_and_model_changes():
     assert "claude CLI: 1 -> 9" in c.changes and "writer_model: opus -> sonnet" in c.changes
     text = pe.format_comparison(c, {"run_id": "r", "promoted_at": "t"})
     assert "prompts changed since the baseline: address.md, tester.md" in text
+
+
+@pytest.mark.parametrize("kind, verdicts, ok", [
+    ("missing_symbol", ["valid_collection_error", "valid_assertion"], True),  # EVAL-3's live red-first
+    ("missing_symbol", ["valid_missing_symbol"], True),
+    ("missing_symbol", ["valid_assertion"], False),
+    ("assertion", ["valid_assertion", "valid_assertion"], True),
+    ("assertion", ["valid_collection_error"], False),
+    ("assertion", ["valid_assertion", "invalid"], False),
+    ("assertion", [], False),
+])
+def test_red_first_expectation(kind, verdicts, ok):
+    assert pe.red_first_as_expected(kind, [{"test": "t", "verdict": v} for v in verdicts]) is ok
+
+
+def test_fixture_change_is_reported(world):
+    assert world.eval()[0] == 0
+    with (world.evals / "tickets" / "EVAL-2" / "hidden_test.py").open("a") as f:
+        f.write("\n\ndef test_more():\n    pass\n")
+    code, out = world.eval()
+    assert "eval fixtures changed since the baseline: EVAL-2" in out
+    assert "prompts changed since the baseline: none" in out
+
+
+def test_baseline_without_fixture_hashes_says_unknown():
+    run = _record()
+    run["fixture_hashes"] = {"toy": "a"}
+    text = pe.format_comparison(pe.compare(_record(), run), {"run_id": "r"})
+    assert "eval fixtures changed since the baseline: unknown" in text
 
 
 def test_compare_flags_a_ticket_missing_from_the_run():

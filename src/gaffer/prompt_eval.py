@@ -277,6 +277,20 @@ def prompt_hashes(prompts_dir: Path | None = None) -> dict[str, str]:
     return {f"{n}.md": hashlib.sha256((d / f"{n}.md").read_bytes()).hexdigest() for n in ch.PROMPT_NAMES}
 
 
+def fixture_hashes(evals_dir: Path) -> dict[str, str]:
+    """sha256 over the toy repo and over each ticket dir (paths and contents), so a comparison can
+    say when the eval itself changed rather than the prompts."""
+    def tree(root: Path) -> str:
+        h = hashlib.sha256()
+        for p in sorted(q for q in root.rglob("*") if q.is_file() and "__pycache__" not in q.parts):
+            h.update(p.relative_to(root).as_posix().encode() + b"\0" + p.read_bytes() + b"\0")
+        return h.hexdigest()
+
+    out = {"toy": tree(evals_dir / "toy")}
+    out |= {d.name: tree(d) for d in sorted((evals_dir / "tickets").iterdir()) if d.is_dir()}
+    return out
+
+
 # --- the runner with a local-only PUBLISH ---------------------------------------------------------
 
 
@@ -494,8 +508,7 @@ def collect(store: st.Store, job: st.Job | None, ticket: Ticket, wall: float) ->
     judgements = [j.get("verdict") for j in (review.result or {}).get("harness_judgements", [])] if review else []
 
     expected: dict[str, bool] = {"completed": job.state == "READY"}
-    allowed = RED_FIRST_KINDS[ticket.expected.red_first]
-    expected[f"red_first_{ticket.expected.red_first}"] = bool(verdicts) and all(v["verdict"] in allowed for v in verdicts)
+    expected[f"red_first_{ticket.expected.red_first}"] = red_first_as_expected(ticket.expected.red_first, verdicts)
     expected["address_" + "_or_".join(ticket.expected.address)] = stages["address"] in ticket.expected.address
     if ticket.expected.dependency:
         expected[f"declares_{ticket.expected.dependency}"] = _declares(job, final_head, ticket.expected.dependency)
@@ -546,6 +559,15 @@ def collect(store: st.Store, job: st.Job | None, ticket: Ticket, wall: float) ->
     }
 
 
+def red_first_as_expected(kind: str, verdicts: Sequence[Mapping[str, str]]) -> bool:
+    """At least one acceptance test is red the expected way (the new symbol, or the buggy behaviour)
+    and every one is a valid red. Other criteria may be red another valid way: EVAL-3's "declared in
+    requirements.txt" is red by assertion, its new function by a missing symbol."""
+    valid = {v.value for v in rv_redfirst.VALID_RED}
+    return (any(v["verdict"] in RED_FIRST_KINDS[kind] for v in verdicts)
+            and all(v["verdict"] in valid for v in verdicts))
+
+
 def _verify_stage(events: Sequence[st.Event], blocked: str | None) -> str:
     if events and events[0].detail.get("passed"):
         return "passed"
@@ -581,6 +603,7 @@ class Comparison:
     changes: list[str] = field(default_factory=list)  # neither better nor worse: worth knowing
     improvements: list[str] = field(default_factory=list)
     prompts_changed: list[str] = field(default_factory=list)
+    fixtures_changed: list[str] | None = None  # None: the baseline predates fixture hashes
 
 
 def compare(baseline: Mapping[str, Any], run: Mapping[str, Any]) -> Comparison:
@@ -592,6 +615,9 @@ def compare(baseline: Mapping[str, Any], run: Mapping[str, Any]) -> Comparison:
     c = Comparison()
     old_p, new_p = baseline.get("prompt_hashes", {}), run.get("prompt_hashes", {})
     c.prompts_changed = sorted(n for n in set(old_p) | set(new_p) if old_p.get(n) != new_p.get(n))
+    if "fixture_hashes" in baseline and "fixture_hashes" in run:
+        old_f, new_f = baseline["fixture_hashes"], run["fixture_hashes"]
+        c.fixtures_changed = sorted(n for n in set(old_f) | set(new_f) if old_f.get(n) != new_f.get(n))
     for what in ("claude", "codex"):
         a, b = (baseline.get("cli") or {}).get(what), (run.get("cli") or {}).get(what)
         if a != b:
@@ -666,6 +692,9 @@ def _compare_ticket(c: Comparison, key: str, a: Mapping[str, Any], b: Mapping[st
 def format_comparison(c: Comparison, baseline: Mapping[str, Any]) -> str:
     lines = [f"gaffer eval: compared with baseline {baseline.get('run_id')} (stored {baseline.get('promoted_at') or '?'})"]
     lines.append("  prompts changed since the baseline: " + (", ".join(c.prompts_changed) if c.prompts_changed else "none"))
+    lines.append("  eval fixtures changed since the baseline: " + (
+        "unknown (the baseline has no fixture hashes)" if c.fixtures_changed is None
+        else ", ".join(c.fixtures_changed) if c.fixtures_changed else "none"))
     for title, items in (("REGRESSION", c.regressions), ("warning", c.warnings), ("improved", c.improvements),
                          ("changed", c.changes)):
         for i in items:
@@ -839,6 +868,7 @@ def _eval(config_path: Path | None, *, home: Path, save_baseline: bool, say: Cal
             "complete": stopped is None and len(results) == len(tickets),
             "stopped": stopped,
             "prompt_hashes": hashes,
+            "fixture_hashes": fixture_hashes(evals_dir),
             "cli": cli, "srt": ch.SRT_VERSION,
             "writer_model": cfg.writer_model, "codex_model": cfg.codex_model,
             "config": "defaults" if user is None else str(user.path),
