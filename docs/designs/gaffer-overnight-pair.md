@@ -2381,7 +2381,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: R4, R5, R11, R12, R13, R22, R25
   - Files: src/gaffer/reviews.py, tests/test_junit.py, tests/test_redfirst.py, tests/test_required_checks.py, tests/test_coderabbit_admission.py, tests/test_rounds.py, tests/test_packet.py
   - Verify: `uv run pytest tests/test_junit.py tests/test_redfirst.py tests/test_required_checks.py tests/test_coderabbit_admission.py tests/test_rounds.py tests/test_packet.py`
-- [ ] **T9 (P1, human: ~3 days / CC: ~2h)** runner: state machine, local repair loop, locks, exit codes, rerun flags, round summary comment, report
+- [x] **T9 (P1, human: ~3 days / CC: ~2h)** runner: state machine, local repair loop, locks, exit codes, rerun flags, round summary comment, report
   - Surfaced by: R8, R9, R24, D2
   - Files: src/gaffer/runner.py, tests/test_runner_states.py, tests/test_rerun_flags.py, tests/test_locks.py
   - Verify: `uv run pytest tests/test_runner_states.py tests/test_rerun_flags.py tests/test_locks.py`
