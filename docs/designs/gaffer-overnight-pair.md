@@ -2081,7 +2081,7 @@ Actual answer: A) Add to TODOS.md (D33 answer, 2026-10-18)
 Accepted scope: Add a P1 item under ## Scheduler in TODOS.md: Approach B capacity scheduler daemon (quota-window model from measured usage, admission with tester/reviewer/repair reservations, overnight interval, daytime headroom), `agent-ready` pickup, launchd, Jasper/Telegram notifier, Linear write-back (deferred by D1), two-job limit; depends on the v0.1 demo (SC2-SC5) and Experiment 1 quota data. Effort XL.
 History: none
 
-Approval readiness: PASS. Checked: D1 (D1 answer), D2 (D2 answer), D3 (D3 answer), R1 (D4), R2 (D5), R3 (D7), R4 (D8), R5 (D9), R6 (D10), R7 (D11), R8 (D12), R9 (D13), R10 (D14), R11 (D15), R12 (D16), R13 (D18), R14 (D19), R15 (D20), R16 (D21), R17 (D22, subsumed by R25), R18 (D23), R19 (D24), R20 (D25), R21 (D26), R22 (D27), R24 (D29), R25 (D30), R26 (D31), T1 (D32), T2 (D33), R27 (Mark, 2026-10-20, after Experiment 2), R28 (Mark, 2026-10-22, after Experiment 3), R29 (Mark, 2026-10-22, after Experiment 3b), R30 (Mark, 2026-10-22, after the T4 review), R31 (Mark, 2026-10-22, after the T5-T8 review), R32 (Mark, 2026-10-22, after the R31 and T9 review). Architecture #3 (argv-only, issue-key validation) carried by prior approval of the design Constraints. Unresolved: R23 (D28 = investigate first; no remedy approved).
+Approval readiness: PASS. Checked: D1 (D1 answer), D2 (D2 answer), D3 (D3 answer), R1 (D4), R2 (D5), R3 (D7), R4 (D8), R5 (D9), R6 (D10), R7 (D11), R8 (D12), R9 (D13), R10 (D14), R11 (D15), R12 (D16), R13 (D18), R14 (D19), R15 (D20), R16 (D21), R17 (D22, subsumed by R25), R18 (D23), R19 (D24), R20 (D25), R21 (D26), R22 (D27), R24 (D29), R25 (D30), R26 (D31), T1 (D32), T2 (D33), R27 (Mark, 2026-10-20, after Experiment 2), R28 (Mark, 2026-10-22, after Experiment 3), R29 (Mark, 2026-10-22, after Experiment 3b), R30 (Mark, 2026-10-22, after the T4 review), R31 (Mark, 2026-10-22, after the T5-T8 review), R32 (Mark, 2026-10-22, after the R31 and T9 review), R33 (Mark, 2026-10-24, after the T11 report). Architecture #3 (argv-only, issue-key validation) carried by prior approval of the design Constraints. Unresolved: R23 (D28 = investigate first; no remedy approved).
 
 ### R27: Experiment 2 corrections (CodeRabbit completion and admission)
 Finding: Experiment 2 (`docs/experiments/coderabbit.md`, commit 93eb5a3), section 8 proposals; T2 fixtures in `tests/fixtures/coderabbit/`.
@@ -2207,6 +2207,19 @@ Actual answer: reject failing guards; harness verdict is a packet item; CLAUDE.m
 Accepted scope: the "After (approved)" column above.
 History: amends R5, R7 and R31.
 
+### R33: T11 eval findings (trailer, EVAL-2 fixture)
+Finding: `docs/t11-eval-report.md` (Open issues 1, Decisions 1 and 2); Mark's review 2026-10-24.
+
+| Choice | Before | After (approved) |
+|---|---|---|
+| Where the R7/R30 reason is read | git's trailer block (`%(trailers:key=Tester-Change-Reason)`), which is only the message's last paragraph; Claude Code appends its `Co-Authored-By:` as a paragraph of its own, so every writer change to a tester, harness or CI file blocked with tester_change_unexplained | **anywhere in the commit message**: a line that starts with exactly `Tester-Change-Reason:` (case-sensitive, no leading whitespace, no folded continuation lines) and has a non-empty value after trimming. Several lines on one commit are joined with "; "; the reason still covers only the guarded files in its own commit; a missing or empty reason still blocks. Prompts unchanged (Mark, 2026-10-24, after the T11 report) |
+| EVAL-2 seeded feedback (R19) | "hyphenated names" (`initials("jean-paul sartre") == "JPS"`), which contradicts the ticket's "words are separated by whitespace"; the writer correctly declined it | **in scope**: "first letter, not first character" (`initials("ada (byron) lovelace") == "ABL"`, `initials('"grace" hopper') == "GH"`, a word with no letters adds nothing), which the ticket's own wording asks for and its acceptance criteria don't cover; expected disposition `fixed`; hidden tests check it. EVAL-1's declined case unchanged |
+
+State: approved
+Actual answer: read the line anywhere; make the feedback in scope (Mark, 2026-10-24).
+Accepted scope: the "After (approved)" column above. A fresh eval baseline is stored after both changes.
+History: amends R7, R19 and R30.
+
 ## v0.1 plan as amended by eng review
 
 This section is the working plan after the review. Where it conflicts with "Recommended Approach" above, this section wins. Each rule cites its ledger record.
@@ -2236,7 +2249,8 @@ RED-FIRST  gaffer test run in verification worktree, sandboxed, no network, JUni
    ▼
 WRITER     Claude, pre-assigned --session-id (R9), sandbox: writes = job dir, denyRead,
            registries only (R1, R14, R21) → result done | blocked(question) (R10)
-   │ gates: clean tree with one nudge (R10), trailers on tester/harness edits (R7),
+   │ gates: clean tree with one nudge (R10), a Tester-Change-Reason line anywhere in
+   │ the message on tester/harness/CI edits (R7, R30, R33),
    │ forbidden paths, cited SHAs (R10)
    ▼
 VERIFY     exact head in verification worktree (R4) ── fail → local packet → RESUME,
