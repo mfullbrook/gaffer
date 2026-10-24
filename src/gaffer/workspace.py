@@ -2,7 +2,8 @@
 commit gates, the gitleaks gate, push, PR and the round summary comment.
 
 Decisions: R4 (verification worktree at an exact head), R6 (tester paths),
-R7 and R30 (Tester-Change-Reason trailers on tester, harness and CI files),
+R7, R30 and R33 (a Tester-Change-Reason line on tester, harness and CI file
+changes, read anywhere in the commit message),
 R9 (round summary marker), R10 (writer gates), R12 and R27 (PR opening, PR
 body read-back), R14 and R29 (installs; the sandboxed run is T5's), R15
 (gitleaks), R21, R28 and R30 (per-job `git clone --local` under job_root,
@@ -737,8 +738,18 @@ def _changed_paths(cwd: Path, commit: str) -> list[str]:
 
 
 def _trailer(cwd: Path, commit: str) -> str | None:
-    out = _out(cwd, "log", "-1", f"--format=%(trailers:key={TRAILER_KEY},valueonly,separator=%x1f)", commit)
-    values = [v.strip() for v in out.split("\x1f") if v.strip()]
+    """The commit's Tester-Change-Reason, or None (R7, R30; R33: read anywhere in the message).
+
+    Git's trailer parser reads only the last paragraph, and Claude Code appends its
+    `Co-Authored-By:` as a paragraph of its own, so gaffer reads the raw message instead.
+    A reason is a line that starts with exactly `Tester-Change-Reason:` (case-sensitive, no
+    leading whitespace, no folded continuation lines) and has a non-empty value after
+    trimming. Several such lines on one commit are joined with "; ", as before; the reason
+    still covers every guarded file in that commit.
+    """
+    message = git(cwd, "log", "-1", "--format=%B", commit).stdout.decode(errors="replace")
+    prefix = f"{TRAILER_KEY}:"
+    values = [v for line in message.split("\n") if line.startswith(prefix) and (v := line[len(prefix):].strip())]
     return "; ".join(values) or None
 
 

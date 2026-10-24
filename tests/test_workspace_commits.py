@@ -324,6 +324,102 @@ def test_empty_trailer_is_unexplained(tested):
     assert gate(tested).reason == w.TESTER_CHANGE_UNEXPLAINED
 
 
+# R33: the reason is read anywhere in the message. Claude Code appends its own Co-Authored-By
+# paragraph after the writer's, and git's trailer parser reads only the last paragraph.
+
+CO_AUTHOR = "Co-Authored-By: Claude <noreply@anthropic.com>\n"
+
+
+def verbatim_commit(job, message: str) -> str:
+    """Commit pyproject.toml (a harness file) keeping the message byte for byte (no cleanup)."""
+    write(job.clone, "pyproject.toml", "x = 1\n")
+    run_git(job.clone, "add", "-A")
+    run_git(job.clone, "commit", "-q", "--cleanup=verbatim", "-F", "-", input=message)
+    return run_git(job.clone, "rev-parse", "HEAD")
+
+
+def test_reason_before_a_co_authored_by_paragraph_passes(tested):
+    msg = "add humanize\n\nTester-Change-Reason: the ticket adds humanize\n\n" + CO_AUTHOR
+    c = tested.writer_commit({"requirements.txt": "humanize\n"}, msg)
+    # git itself doesn't see it: this is the case R33 fixes.
+    assert "Tester-Change-Reason" not in run_git(tested.clone, "log", "-1", "--format=%(trailers)", c)
+    r = gate(tested)
+    assert r.ok
+    assert r.guarded_changes == (w.GuardedChange(c, "requirements.txt", "harness", "the ticket adds humanize"),)
+
+
+def test_reason_in_the_body_text_passes(tested):
+    msg = "add humanize\n\nTester-Change-Reason: the ticket adds humanize\nMore prose after it.\n\n" + CO_AUTHOR
+    tested.writer_commit({"requirements.txt": "humanize\n"}, msg)
+    assert gate(tested).guarded_changes[0].reason == "the ticket adds humanize"
+
+
+def test_reason_in_the_last_paragraph_still_passes(tested):
+    tested.writer_commit({"requirements.txt": "humanize\n"},
+                         "add humanize\n\n" + CO_AUTHOR + "Tester-Change-Reason: the ticket adds humanize\n")
+    r = gate(tested)
+    assert r.ok and r.guarded_changes[0].reason == "the ticket adds humanize"
+
+
+def test_missing_reason_with_a_co_authored_by_paragraph_blocks(tested):
+    tested.writer_commit({"requirements.txt": "humanize\n"}, "add humanize\n\n" + CO_AUTHOR)
+    r = gate(tested)
+    assert r.reason == w.TESTER_CHANGE_UNEXPLAINED and r.guarded_changes[0].reason is None
+
+
+@pytest.mark.parametrize("message", [
+    "deps\n\nTester-Change-Reason:\n\n" + CO_AUTHOR,
+    "deps\n\nTester-Change-Reason: \t \n\n" + CO_AUTHOR,  # whitespace only, kept verbatim
+    "deps\n\nTester-Change-Reason:\r\n\n" + CO_AUTHOR,
+])
+def test_empty_value_blocks(tested, message):
+    verbatim_commit(tested, message)
+    assert gate(tested).reason == w.TESTER_CHANGE_UNEXPLAINED
+
+
+@pytest.mark.parametrize("line", [
+    "foo Tester-Change-Reason: x",        # the key mid-line
+    "  Tester-Change-Reason: x",          # indented: not at the start of the line
+    "tester-change-reason: x",            # the key is case-sensitive
+    "TESTER-CHANGE-REASON: x",
+    "Tester-Change-Reason x",             # no colon
+    "Tester-Change-Reason : x",           # space before the colon
+    "Tester-Change-Reasons: x",           # a longer key
+    "X-Tester-Change-Reason: x",
+])
+def test_a_line_that_is_not_exactly_the_key_blocks(tested, line):
+    verbatim_commit(tested, f"deps\n\n{line}\n\n{CO_AUTHOR}")
+    assert gate(tested).reason == w.TESTER_CHANGE_UNEXPLAINED
+
+
+def test_reason_value_is_trimmed(tested):
+    verbatim_commit(tested, "deps\n\nTester-Change-Reason:   pin x \t\r\n\n" + CO_AUTHOR)
+    assert gate(tested).guarded_changes[0].reason == "pin x"
+
+
+def test_several_reason_lines_are_joined_and_empty_ones_skipped(tested):
+    verbatim_commit(tested, "Tester-Change-Reason: first\n\nbody\nTester-Change-Reason:  \n"
+                            "Tester-Change-Reason: second\n\n" + CO_AUTHOR)
+    r = gate(tested)
+    assert r.ok and r.guarded_changes[0].reason == "first; second"
+
+
+def test_reason_applies_to_every_guarded_file_in_its_commit(tested):
+    c = tested.writer_commit({"requirements.txt": "humanize\n", "pyproject.toml": "x = 1\n"},
+                             "deps\n\nTester-Change-Reason: add humanize\n\n" + CO_AUTHOR)
+    r = gate(tested)
+    assert r.ok
+    assert sorted(r.guarded_changes, key=lambda g: g.path) == [
+        w.GuardedChange(c, "pyproject.toml", "harness", "add humanize"),
+        w.GuardedChange(c, "requirements.txt", "harness", "add humanize")]
+
+
+def test_reason_in_another_commits_body_still_does_not_count(tested):
+    tested.writer_commit({"pyproject.toml": "x = 1\n"}, "deps\n\n" + CO_AUTHOR)
+    tested.writer_commit({"src/app/a.py": "a = 1\n"}, "code\n\nTester-Change-Reason: unrelated\n\n" + CO_AUTHOR)
+    assert gate(tested).reason == w.TESTER_CHANGE_UNEXPLAINED
+
+
 @pytest.mark.parametrize("path", [".claude/settings.json", ".codex/config.toml", ".mcp.json", "sub/.claude/x.md"])
 def test_forbidden_paths_block_even_with_trailer(tested, path):
     tested.writer_commit({path: "{}\n"}, "cfg\n\nTester-Change-Reason: please\n")
