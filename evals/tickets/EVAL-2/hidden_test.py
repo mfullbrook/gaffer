@@ -14,8 +14,13 @@ def test_empty():
     assert initials("") == ""
 
 
-def test_hyphenated_feedback():
-    assert initials("jean-paul sartre") == "JPS"
+def test_first_letter_skips_punctuation_feedback():
+    assert initials("ada (byron) lovelace") == "ABL"
+    assert initials('"grace" hopper') == "GH"
+
+
+def test_word_without_letters_adds_nothing_feedback():
+    assert initials("ada & grace") == "AG"
 
 
 def test_existing_helpers_unchanged():

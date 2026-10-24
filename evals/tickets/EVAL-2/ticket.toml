@@ -14,13 +14,19 @@ first letter of each word in a name. Words are separated by whitespace.
 - [ ] `shout` and `word_count` keep working as before
 """
 
+# In scope (R33): the ticket asks for the first letter of each word, while the obvious
+# implementation (`word[0]`, which the T11 baseline writer wrote) takes the first character.
 [feedback]
 source = "coderabbit"
 path = "toy/textutil.py"
 line = 1
 body = """
-**Hyphenated names.** `initials("jean-paul sartre")` returns `"JS"`, but each hyphen-separated
-part of a name is a name in its own right: it should return `"JPS"`.
+**First letter, not first character.** The ticket asks for the first *letter* of each word, but
+`initials` takes each word's first character, so punctuation leaks into the result:
+`initials("ada (byron) lovelace")` returns `"A(L"` instead of `"ABL"`, and
+`initials('"grace" hopper')` returns `'"H'` instead of `"GH"`. Use the first letter of each
+word, and let a word with no letters at all add nothing: `initials("ada & grace")` should
+return `"AG"`.
 """
 
 [expected]

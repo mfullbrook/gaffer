@@ -620,7 +620,7 @@ def test_real_toy_materializes_and_its_tests_pass(tmp_path):
 SOLUTIONS = {
     "EVAL-1": ("toy/textutil.py", "def word_count(text: str) -> int:\n    return len(text.split())\n"),
     "EVAL-2": ("toy/textutil.py", "def initials(name: str) -> str:\n"
-                                  "    return ''.join(p[0].upper() for w in name.split() for p in w.split('-') if p)\n"),
+                                  "    return ''.join(next((c for c in w if c.isalpha()), '') for w in name.split()).upper()\n"),
 }
 
 
@@ -636,6 +636,29 @@ def test_real_hidden_tests_fail_on_base_and_pass_on_a_solution(tmp_path, key):
             f.write("\n\n" + code)
         p = _pytest(checkout)
         assert p.returncode == 0, p.stdout + p.stderr
+
+
+# Solutions that meet the ticket but not its seeded feedback item, so that item needs a real code
+# change through address.md (R33). EVAL-2's is the code the T11 baseline writer committed.
+TICKET_ONLY_SOLUTIONS = {
+    "EVAL-2": ("toy/textutil.py", "def initials(name: str) -> str:\n"
+                                  "    return ''.join(word[0] for word in name.split()).upper()\n"),
+}
+
+
+@pytest.mark.parametrize("key", sorted(TICKET_ONLY_SOLUTIONS))
+def test_real_seeded_item_needs_a_code_change(tmp_path, key):
+    ticket = next(t for t in pe.load_tickets(pe.EVALS_DIR / "tickets") if t.key == key)
+    assert ticket.expected.address == ("fixed",)
+    checkout, _ = pe.make_toy(pe.EVALS_DIR / "toy", tmp_path)
+    (checkout / pe.HIDDEN_TEST_PATH).write_text(ticket.hidden_test)
+    path, code = TICKET_ONLY_SOLUTIONS[key]
+    with (checkout / path).open("a") as f:
+        f.write("\n\n" + code)
+    p = _pytest(checkout, "-rf", pe.HIDDEN_TEST_PATH)
+    failed = {ln.split("::")[1].split(" ")[0] for ln in p.stdout.splitlines() if ln.startswith("FAILED")}
+    feedback_tests = {n for n in ticket.hidden_tests if n.endswith("_feedback")}
+    assert feedback_tests and failed == feedback_tests, p.stdout + p.stderr
 
 
 @pytest.mark.parametrize("edit, problem", [
