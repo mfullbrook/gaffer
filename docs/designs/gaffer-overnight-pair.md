@@ -2389,7 +2389,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: R18
   - Files: src/gaffer/children.py, tests/test_doctor.py
   - Verify: `uv run pytest tests/test_doctor.py` plus one live `gaffer doctor`
-- [ ] **T11 (P2, human: ~1 day / CC: ~45 min)** eval: three-ticket toy eval with baselines
+- [x] **T11 (P2, human: ~1 day / CC: ~45 min)** eval: three-ticket toy eval with baselines
   - Surfaced by: R19
   - Files: evals/, src/gaffer/runner.py
   - Verify: `gaffer eval` stores a baseline; second run compares
