@@ -196,7 +196,7 @@ The skipped-gates statements required by source spec §10 (staging, legal, live 
 - **Repo config:** children run with project-level settings, hooks and MCP servers disabled, via the CLI's own controls pinned in Experiment 3. If an installed CLI can't disable them, gaffer refuses repos that contain them.
 - **Instruction files:** `CLAUDE.md` and `AGENTS.md` are read as untrusted guidance. They cannot change gaffer's permission set.
 - **Account precondition:** Mark disables paid overage ("extra usage") on both subscriptions, and Experiment 1 records that it is off.
-- **Limits:** a usage-limit event in any child stops the job as BLOCKED: usage_limit, with the reset time if the CLI reports one. No retry loop.
+- **Limits:** a usage-limit event in any child stops the job as BLOCKED: usage_limit, with the reset time if the CLI reports one. No retry loop. *Amended by R34: an HTTP 429/529 throttle is retried after about 30 s, 2 min and 5 min first, then treated as a usage limit.*
 
 ### Modules
 
@@ -2081,7 +2081,7 @@ Actual answer: A) Add to TODOS.md (D33 answer, 2026-10-18)
 Accepted scope: Add a P1 item under ## Scheduler in TODOS.md: Approach B capacity scheduler daemon (quota-window model from measured usage, admission with tester/reviewer/repair reservations, overnight interval, daytime headroom), `agent-ready` pickup, launchd, Jasper/Telegram notifier, Linear write-back (deferred by D1), two-job limit; depends on the v0.1 demo (SC2-SC5) and Experiment 1 quota data. Effort XL.
 History: none
 
-Approval readiness: PASS. Checked: D1 (D1 answer), D2 (D2 answer), D3 (D3 answer), R1 (D4), R2 (D5), R3 (D7), R4 (D8), R5 (D9), R6 (D10), R7 (D11), R8 (D12), R9 (D13), R10 (D14), R11 (D15), R12 (D16), R13 (D18), R14 (D19), R15 (D20), R16 (D21), R17 (D22, subsumed by R25), R18 (D23), R19 (D24), R20 (D25), R21 (D26), R22 (D27), R24 (D29), R25 (D30), R26 (D31), T1 (D32), T2 (D33), R27 (Mark, 2026-10-20, after Experiment 2), R28 (Mark, 2026-10-22, after Experiment 3), R29 (Mark, 2026-10-22, after Experiment 3b), R30 (Mark, 2026-10-22, after the T4 review), R31 (Mark, 2026-10-22, after the T5-T8 review), R32 (Mark, 2026-10-22, after the R31 and T9 review), R33 (Mark, 2026-10-24, after the T11 report; EVAL-3 row 2026-10-25, after the R33 report). Architecture #3 (argv-only, issue-key validation) carried by prior approval of the design Constraints. Unresolved: R23 (D28 = investigate first; no remedy approved).
+Approval readiness: PASS. Checked: D1 (D1 answer), D2 (D2 answer), D3 (D3 answer), R1 (D4), R2 (D5), R3 (D7), R4 (D8), R5 (D9), R6 (D10), R7 (D11), R8 (D12), R9 (D13), R10 (D14), R11 (D15), R12 (D16), R13 (D18), R14 (D19), R15 (D20), R16 (D21), R17 (D22, subsumed by R25), R18 (D23), R19 (D24), R20 (D25), R21 (D26), R22 (D27), R24 (D29), R25 (D30), R26 (D31), T1 (D32), T2 (D33), R27 (Mark, 2026-10-20, after Experiment 2), R28 (Mark, 2026-10-22, after Experiment 3), R29 (Mark, 2026-10-22, after Experiment 3b), R30 (Mark, 2026-10-22, after the T4 review), R31 (Mark, 2026-10-22, after the T5-T8 review), R32 (Mark, 2026-10-22, after the R31 and T9 review), R33 (Mark, 2026-10-24, after the T11 report; EVAL-3 row 2026-10-25, after the R33 report), R34 (Mark, 2026-10-25, after the R33 follow-up). Architecture #3 (argv-only, issue-key validation) carried by prior approval of the design Constraints. Unresolved: R23 (D28 = investigate first; no remedy approved).
 
 ### R27: Experiment 2 corrections (CodeRabbit completion and admission)
 Finding: Experiment 2 (`docs/experiments/coderabbit.md`, commit 93eb5a3), section 8 proposals; T2 fixtures in `tests/fixtures/coderabbit/`.
@@ -2220,6 +2220,21 @@ State: approved
 Actual answer: read the line anywhere; make the feedback in scope (Mark, 2026-10-24); EVAL-3: negative sizes are invalid in the ticket, option (a) (Mark, 2026-10-25).
 Accepted scope: the "After (approved)" column above. A fresh eval baseline is stored after each fixture change.
 History: amends R7, R19 and R30.
+
+### R34: HTTP 429 backoff and baseline promotion
+Finding: `docs/r33-trailer-eval2-report.md` (follow-up, Open issues 2 and 3): the EVAL-3 reviewer got `429 Too Many Requests` twice while Codex reported 0% and 2% usage, gaffer called it reviewer_failed, and `--save-baseline` promoted that run despite 6 regressions; Mark's review 2026-10-25.
+
+| Choice | Before | After (approved) |
+|---|---|---|
+| HTTP 429 from a Codex child (tester, reviewer) | not recognised: an ordinary failure, retried at once, then BLOCKED: tester_failed / reviewer_failed | **back off, then treat as a limit**: a run with no result, no usage-limit signal and a 429 / "Too Many Requests" in the CLI's error events is retried after about 30 s, 2 min and 5 min (`Deps.backoff`, injectable); still 429 after the last wait = a `LimitEvent`, so the existing path applies (BLOCKED: usage_limit; a rerun resumes). A real usage-limit signal (rate-limit windows, limit text) still wins at once. Each try is its own attempt row (outcome `throttled`) and a `throttled` event, but none is the step's own retry, a repair cycle or a nudge (Mark, 2026-10-25) |
+| Claude API 429 / 529 (overloaded) from the writer | 529 ended BLOCKED: writer_no_result; a 429 was a limit only if its text said "rate limit" | **the same rule**: an error result whose text has 429, 529, "Too Many Requests" or "overloaded" (and no `rate_limit_event` rejection) is retried after the same waits by resuming the same session, as the recovery table resumes a dead writer: with "continue" after a launch, with the same packet after a resume. Not a nudge, fresh-writer fallback or repair cycle; still throttled = BLOCKED: usage_limit |
+| `gaffer eval` and a 429 | promoted as a complete run | a 429 that ends as a limit stops the run as incomplete (exit 3, never promoted); a 429 recovered after a wait isn't a tester retry, and the record counts `throttled_retries` |
+| `gaffer eval --save-baseline` with regressions | promotes any complete run | **refuses**: the run is stored and compared, nothing is promoted, exit 2, and the output names `gaffer eval --promote <run>` for a deliberate promotion. `--promote` unchanged |
+
+State: approved
+Actual answer: back off, then treat as a limit; `--save-baseline` refuses regressions (Mark, 2026-10-25).
+Accepted scope: the "After (approved)" column above.
+History: amends the design's Limits rule ("No retry loop": a 429 backoff now comes before the limit), R9's recovery table use (the writer retry reuses it), R19 and R33's baseline rule.
 
 ## v0.1 plan as amended by eng review
 
