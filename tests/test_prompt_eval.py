@@ -600,6 +600,17 @@ def test_real_tickets_load():
         assert "hidden" not in t.description.lower()  # the hidden tests are never described to children
 
 
+def test_real_eval3_negatives_are_a_ticket_criterion_not_the_seeded_item():
+    """R33: EVAL-3's ticket asks for ValueError on negative sizes, so the tester covers it; the seeded
+    item asks for something else (TypeError on a non-int)."""
+    t = next(t for t in pe.load_tickets(pe.EVALS_DIR / "tickets") if t.key == "EVAL-3")
+    criteria = rn.acceptance_criteria(t.issue().description) or ""
+    assert "human_size(-1500)" in criteria and "ValueError" in criteria
+    assert "test_negative_raises_value_error" in t.hidden_tests
+    assert "ValueError" not in t.feedback.body and "TypeError" in t.feedback.body
+    assert "TypeError" not in t.description
+
+
 def _pytest(cwd: Path, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", *args], cwd=cwd,
                           capture_output=True, text=True, env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
@@ -617,11 +628,45 @@ def test_real_toy_materializes_and_its_tests_pass(tmp_path):
     assert p.returncode == 0 and "2 passed" in p.stdout, p.stdout + p.stderr
 
 
+# Stand-in for humanize 4.16.0's decimal naturalsize(), written next to the toy so the EVAL-3
+# solutions run without PyPI. Same algorithm; the values the hidden tests use were checked against
+# the real package (docs/r33-trailer-eval2-report.md).
+HUMANIZE_STUB = """from math import log
+
+
+def naturalsize(value, binary=False, gnu=False, format="%.1f"):
+    suffix = ("kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB", "RB", "QB")
+    bytes_ = float(value)
+    abs_bytes = abs(bytes_)
+    if abs_bytes == 1:
+        return "%d Byte" % int(bytes_)
+    if abs_bytes < 1000:
+        return "%d Bytes" % int(bytes_)
+    exp = int(min(log(abs_bytes, 1000), len(suffix)))
+    if exp < len(suffix) and abs(float(format % (abs_bytes / (1000**exp)))) >= 1000:
+        exp += 1
+    return format % (bytes_ / (1000**exp)) + " " + suffix[exp - 1]
+"""
+
+# Files appended to (or created in) the toy: a reference solution that passes every hidden test.
 SOLUTIONS = {
-    "EVAL-1": ("toy/textutil.py", "def word_count(text: str) -> int:\n    return len(text.split())\n"),
-    "EVAL-2": ("toy/textutil.py", "def initials(name: str) -> str:\n"
-                                  "    return ''.join(next((c for c in w if c.isalpha()), '') for w in name.split()).upper()\n"),
+    "EVAL-1": {"toy/textutil.py": "def word_count(text: str) -> int:\n    return len(text.split())\n"},
+    "EVAL-2": {"toy/textutil.py": "def initials(name: str) -> str:\n"
+                                  "    return ''.join(next((c for c in w if c.isalpha()), '') for w in name.split()).upper()\n"},
+    "EVAL-3": {"humanize.py": HUMANIZE_STUB,
+               "toy/sizes.py": "import humanize\n\n\ndef human_size(n_bytes: int) -> str:\n"
+                               "    if not isinstance(n_bytes, int):\n"
+                               "        raise TypeError(f'n_bytes must be an int, not {type(n_bytes).__name__}')\n"
+                               "    if n_bytes < 0:\n"
+                               "        raise ValueError(f'n_bytes must not be negative: {n_bytes}')\n"
+                               "    return humanize.naturalsize(n_bytes)\n"},
 }
+
+
+def _add(checkout: Path, files: dict[str, str]) -> None:
+    for path, code in files.items():
+        with (checkout / path).open("a") as f:
+            f.write("\n\n" + code)
 
 
 @pytest.mark.parametrize("key", ["EVAL-1", "EVAL-2", "EVAL-3"])
@@ -630,19 +675,22 @@ def test_real_hidden_tests_fail_on_base_and_pass_on_a_solution(tmp_path, key):
     checkout, _ = pe.make_toy(pe.EVALS_DIR / "toy", tmp_path)
     (checkout / pe.HIDDEN_TEST_PATH).write_text(ticket.hidden_test)
     assert _pytest(checkout, pe.HIDDEN_TEST_PATH).returncode != 0  # meaningful: red on the unchanged toy
-    if key in SOLUTIONS:  # EVAL-3 needs humanize from PyPI; the no-model sandbox smoke run covered it
-        path, code = SOLUTIONS[key]
-        with (checkout / path).open("a") as f:
-            f.write("\n\n" + code)
-        p = _pytest(checkout)
-        assert p.returncode == 0, p.stdout + p.stderr
+    _add(checkout, SOLUTIONS[key])
+    p = _pytest(checkout)
+    assert p.returncode == 0 and f"{2 + len(ticket.hidden_tests)} passed" in p.stdout, p.stdout + p.stderr
 
 
 # Solutions that meet the ticket but not its seeded feedback item, so that item needs a real code
-# change through address.md (R33). EVAL-2's is the code the T11 baseline writer committed.
+# change through address.md (R33). EVAL-2's is the code the T11 baseline writer committed; EVAL-3's
+# is the T11/R33 writers' code plus the negative check the ticket now asks for.
 TICKET_ONLY_SOLUTIONS = {
-    "EVAL-2": ("toy/textutil.py", "def initials(name: str) -> str:\n"
-                                  "    return ''.join(word[0] for word in name.split()).upper()\n"),
+    "EVAL-2": {"toy/textutil.py": "def initials(name: str) -> str:\n"
+                                  "    return ''.join(word[0] for word in name.split()).upper()\n"},
+    "EVAL-3": {"humanize.py": HUMANIZE_STUB,
+               "toy/sizes.py": "import humanize\n\n\ndef human_size(n_bytes: int) -> str:\n"
+                               "    if n_bytes < 0:\n"
+                               "        raise ValueError(f'n_bytes must not be negative: {n_bytes}')\n"
+                               "    return humanize.naturalsize(n_bytes)\n"},
 }
 
 
@@ -652,9 +700,7 @@ def test_real_seeded_item_needs_a_code_change(tmp_path, key):
     assert ticket.expected.address == ("fixed",)
     checkout, _ = pe.make_toy(pe.EVALS_DIR / "toy", tmp_path)
     (checkout / pe.HIDDEN_TEST_PATH).write_text(ticket.hidden_test)
-    path, code = TICKET_ONLY_SOLUTIONS[key]
-    with (checkout / path).open("a") as f:
-        f.write("\n\n" + code)
+    _add(checkout, TICKET_ONLY_SOLUTIONS[key])
     p = _pytest(checkout, "-rf", pe.HIDDEN_TEST_PATH)
     failed = {ln.split("::")[1].split(" ")[0] for ln in p.stdout.splitlines() if ln.startswith("FAILED")}
     feedback_tests = {n for n in ticket.hidden_tests if n.endswith("_feedback")}

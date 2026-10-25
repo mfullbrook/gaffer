@@ -7,21 +7,30 @@ Add a new module `toy/sizes.py` with `human_size(n_bytes: int) -> str`, which fo
 count for people using the `humanize` package from PyPI: return `humanize.naturalsize(n_bytes)`
 (decimal units). Declare `humanize` as a dependency in `requirements.txt`.
 
+A byte count can't be negative: for a negative `n_bytes`, raise `ValueError` instead of
+formatting it.
+
 ## Acceptance criteria
 
 - [ ] `human_size(0)` returns `"0 Bytes"` and `human_size(1)` returns `"1 Byte"`
 - [ ] `human_size(1500)` returns `"1.5 kB"`
 - [ ] `human_size(1_000_000)` returns `"1.0 MB"`
+- [ ] `human_size(-1500)` raises `ValueError`
 - [ ] `humanize` is declared in `requirements.txt`
 """
 
+# In scope (R33): the ticket takes an `int` byte count, but naturalsize() accepts any number
+# and truncates it; the T11 and R33 writers passed n_bytes straight through. Negative sizes are
+# the ticket's own criterion, so the seeded item can't ask for them (the tester covers them).
 [feedback]
 source = "coderabbit"
 path = "toy/sizes.py"
 line = 1
 body = """
-**Negative sizes.** A byte count can't be negative, but `human_size(-1500)` returns `"-1.5 kB"`.
-Raise `ValueError` for a negative `n_bytes` instead.
+**Fractional sizes are silently truncated.** `human_size` takes an `int` byte count, but
+`humanize.naturalsize` accepts any number and drops the fraction: `human_size(1.5)` returns
+`"1 Bytes"` and `human_size(2.5)` returns `"2 Bytes"`, which hides a caller bug. Raise
+`TypeError` when `n_bytes` isn't an `int`.
 """
 
 [expected]

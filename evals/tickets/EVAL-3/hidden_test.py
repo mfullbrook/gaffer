@@ -23,6 +23,15 @@ def test_uses_humanize():
     assert human_size(123456789) == humanize.naturalsize(123456789)
 
 
-def test_negative_feedback():
+def test_negative_raises_value_error():
     with pytest.raises(ValueError):
         human_size(-1500)
+    with pytest.raises(ValueError):
+        human_size(-1)
+
+
+def test_fractional_size_raises_type_error_feedback():
+    with pytest.raises(TypeError):
+        human_size(1.5)
+    with pytest.raises(TypeError):
+        human_size(2.5)
