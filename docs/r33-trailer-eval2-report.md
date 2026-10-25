@@ -186,3 +186,147 @@ There was also the doctor rerun: 22 probes, a few short Claude and Codex child r
    - `<tmp>/gaffer-eval-3a4t_rcw` holds the toy, its bare remote and the job clones.
 
    Both are kept, as T11 designed. There is still no retention rule (T11 Decisions, item 13).
+
+---
+
+# Follow-up: EVAL-3 negatives (2026-10-25)
+
+- **Branch:** `eval3-negatives`, cut from `gaffer-v0.1-design` at 492abc5. Not pushed, not merged.
+- **Decision in scope:** Mark approved option (a) for Open issues item 1 above: the ticket makes negative sizes invalid and requires `ValueError`.
+- **Commits:**
+  - 5645c86: EVAL-3 fixture and fixture tests;
+  - a85b5f3: R33 EVAL-3 row;
+  - plus this section.
+- **Result:**
+  - Full suite: **1054 passed**.
+  - One live `--save-baseline` run: `20261025T152154-54a3e9`, **exit 0**, promoted.
+  - EVAL-1 and EVAL-2 are as expected.
+  - **EVAL-3 did not reach its seeded item.** Codex returned `429 Too Many Requests` to both reviewer attempts, so it ended BLOCKED: reviewer_failed at PUBLISH. That run is now the baseline (Open issues below).
+  - `prompts/*.md` were not edited.
+
+## The fixture change
+
+If the ticket requires the `ValueError`, the tester writes a test for it, so the old seeded item ("raise `ValueError` for negative sizes") would only repeat a criterion. So both the ticket and the item changed.
+
+- **Ticket (`evals/tickets/EVAL-3/ticket.toml`):**
+  - The description adds: "A byte count can't be negative: for a negative `n_bytes`, raise `ValueError` instead of formatting it."
+  - A new acceptance criterion: "`human_size(-1500)` raises `ValueError`".
+  - It is still a dependency add (`humanize` from PyPI, declared in `requirements.txt`), so it still goes through the `Tester-Change-Reason:` path.
+- **Seeded item, reworded:** "**Fractional sizes are silently truncated.**"
+  - The ticket's signature takes an `int` byte count, but `humanize.naturalsize` accepts any number and drops the fraction: `human_size(1.5)` returns `"1 Bytes"` and `human_size(2.5)` returns `"2 Bytes"`.
+  - The item asks to raise `TypeError` when `n_bytes` isn't an `int`.
+  - The outputs were checked against real humanize 4.16.0.
+  - The item is in scope (it follows the ticket's own `int` signature), and no criterion covers it.
+  - The obvious implementation misses it. The writers in T11 and R33 passed `n_bytes` straight through. This run's writer wrote exactly the "ticket-only" solution below, the `< 0` check followed by `naturalsize`, so the item would have needed a real change.
+  - I didn't use "pin humanize": all three earlier writers had already pinned `humanize==4.16.0`.
+- **Expected outcomes:** `red_first = "missing_symbol"`, `address = ["fixed"]` and `dependency = "humanize"`, all unchanged.
+- **Hidden tests (6):**
+  - bytes, kB, MB and uses-humanize, as before;
+  - `test_negative_raises_value_error`, now a ticket criterion (-1500 and -1);
+  - `test_fractional_size_raises_type_error_feedback` (1.5 and 2.5).
+
+## Fixture tests (`tests/test_prompt_eval.py`)
+
+- **The EVAL-3 hidden tests now run on solutions.** They used to be skipped because humanize needs PyPI. A `HUMANIZE_STUB` (humanize 4.16.0's decimal `naturalsize` algorithm) is written next to the toy. It gave the same output as the real 4.16.0 for every value the hidden tests use, plus `999_999`, `10**28` and `3*10**34` (checked once in a scratch venv).
+- **Reference solution:** passes all 6 hidden tests. The test now also checks the exact pass count, for every ticket.
+- **Ticket-only solution:** this is the writers' code plus the negative check. `test_real_seeded_item_needs_a_code_change[EVAL-3]` checks that it fails exactly the `_feedback` hidden test.
+- **New test `test_real_eval3_negatives_are_a_ticket_criterion_not_the_seeded_item`:**
+  - the criteria include `human_size(-1500)` with `ValueError`;
+  - the negative hidden test exists;
+  - the item asks for `TypeError`, not `ValueError`;
+  - the description doesn't mention `TypeError`.
+
+### Mutation check (11 mutants, 10 caught, 1 equivalent)
+
+Each mutant was applied to the EVAL-3 fixture, the `real_` tests were run, and the files were restored and compared byte for byte.
+
+| Mutant | Caught by |
+|---|---|
+| negatives back as the seeded feedback test | criterion test, code-change test |
+| fractional feedback test removed | code-change test |
+| feedback test on int sizes (passes on ticket-only code) | reference solution test |
+| feedback test expects `ValueError` | reference solution test |
+| negative hidden test expects `TypeError` | reference solution test, code-change test |
+| negative hidden test removed | criterion test |
+| negative criterion removed from the ticket | criterion test |
+| seeded item asks for `ValueError` on negatives again | criterion test |
+| `declined` accepted | code-change test |
+| dependency expectation dropped | tickets-load test |
+| second fractional case made trivial | **survived, equivalent**: the `1.5` case alone still fails on the ticket-only code, so what the test checks is unchanged |
+
+## Ledger
+
+R33 gains an "EVAL-3 ticket and seeded feedback" row (Mark, 2026-10-25, after the R33 report), and its title, Finding, Actual answer and Approval readiness entry are updated to match.
+
+## Full suite
+
+`uv run pytest` at a85b5f3: **1054 passed in 774 s**. That is 1052 before, plus two new tests: the EVAL-3 code-change case and the criterion test.
+
+## Live run (`20261025T152154-54a3e9`, 247 s, exit 0)
+
+The live run was started through the same two-line scratch wrapper, `gaffer.main(["eval", "--save-baseline"])`. The tool guard refuses any command line containing the literal word "eval", so `uv run gaffer eval` can't be typed directly.
+
+- There is still no `gaffer.toml`, so built-in defaults applied.
+- Doctor wasn't rerun: the CLI versions were unchanged since the 2026-10-24 pass.
+- Nothing was written to `~/.claude`, `~/.codex` or `gaffer.toml`.
+
+| Ticket | Final | Stages | Hidden | Expected outcomes | Writer turns | Wall |
+|---|---|---|---|---|---|---|
+| EVAL-1 bug fix | done | all ok; address **declined** (accepted) | 6/6 | all met | 9 | 74 s |
+| EVAL-2 feature | done | all ok; address **fixed** | 6/6 | all met | 10 | 95 s |
+| EVAL-3 dependency | **blocked: reviewer_failed at PUBLISH** | tester ok, red_first valid, writer ok, verify passed, **review reviewer_failed**, then address, verify_after_address and hidden tests not reached | -/- | red_first_missing_symbol and declares_humanize met; completed, address_fixed and hidden_tests_pass MISSED | 12 | 78 s |
+
+EVAL-3 up to the review:
+
+- The tester wrote 5 acceptance tests, including C4 (`human_size(-1500)` raises `ValueError`). All were valid reds.
+- The writer made all 5 pass. It added `humanize==4.16.0` with a `Tester-Change-Reason:` line, which the R33 gate accepted.
+- Local verify passed.
+
+Comparison with the previous baseline (`20261024T171222-45432f`):
+
+- **6 regressions, all EVAL-3 and all from the reviewer failure:**
+  - no longer completed;
+  - review `ok` → `reviewer_failed`;
+  - address and verify_after_address → `not_reached`;
+  - hidden tests 4/5 → 0/5;
+  - expected outcome `completed` lost.
+- 1 warning: EVAL-1's tester wrote 3 acceptance tests instead of 4 (noise).
+- The comparison named the fixture change ("eval fixtures changed since the baseline: EVAL-3").
+
+**Why the reviewer failed.** Both Codex reviewer runs ended within 3 s with `{"type":"error","message":"exceeded retry limit, last status: 429 Too Many Requests"}` and produced no result. The Codex tester a minute earlier had reported its rate-limit windows at **0% (5 h) and 2% (weekly)** used, with `rate_limit_reached_type: null`. So this was not the subscription cap: it looks like a transient throttle on OpenAI's side.
+
+How gaffer handled it:
+
+- It treated the 429 as an ordinary reviewer failure: retry once, then BLOCKED: reviewer_failed, as designed.
+- `_LIMIT_TEXT` in `children.py` doesn't match "429" or "Too Many Requests", and the failed turn left no rollout `rate_limits`. So it was **not** classified as `usage_limit`, and the run didn't stop as incomplete.
+- The run therefore counted as complete, and `--save-baseline` promoted it despite the regressions. Promoting a complete run regardless of regressions is what `--save-baseline` does by design.
+
+Per instructions I didn't re-run.
+
+**Baseline promoted:** yes. `~/.gaffer/evals/baseline.json` is now `20261025T152154-54a3e9`, replacing `20261024T171222-45432f`. It has fixture hashes, **but it records EVAL-3 as blocked: reviewer_failed**, which reflects the outage rather than the prompts.
+
+### Quota used
+
+| Role | Runs | Input | Output | Time |
+|---|---|---|---|---|
+| Codex tester | 3 | 100.7k (65.5k cached) | 2.7k | 81 s |
+| Codex reviewer | 2 ok, plus 2 failed with no tokens | 70.0k (34.2k cached) | 0.8k | 38 s |
+| Claude writer (opus) | 5 sessions/resumes, 31 turns | 81.3k cache-write, 319.9k cache-read | 5.6k | 106 s |
+
+## Open issues
+
+1. **The promoted baseline holds a transient EVAL-3 failure.** Any later run in which EVAL-3 completes will show as "improved" against it, but a later EVAL-3 reviewer failure won't show as a regression. Options:
+   - (a) one more live `gaffer eval --save-baseline` once Codex is answering, which is the fix I'd recommend;
+   - (b) `gaffer eval --promote 20261024T171222-45432f` (no quota) to go back to the previous baseline, which has the old EVAL-3 fixture and the declined item.
+
+   I did neither: both need your call.
+2. **Codex `429 Too Many Requests` isn't recognised** (a gaffer gap). It isn't treated as a limit or as a transient error, and the one retry comes immediately. Options:
+   - (a) add `429`/`Too Many Requests` to the limit classifier, so the job ends BLOCKED: usage_limit and the eval stops as incomplete and unpromoted;
+   - (b) retry the reviewer with a backoff for 429s before counting a failure.
+
+   In a real overnight job the same outage would have ended in BLOCKED: reviewer_failed, which a rerun fixes.
+3. **`--save-baseline` promotes a complete run even with regressions.** That is T11's design. Options:
+   - (a) keep it as it is;
+   - (b) refuse to promote a run with regressions unless `--promote` is used explicitly afterwards.
+4. **EVAL-3's new seeded item is still unproven live.** This run's writer code (the negative check, then `naturalsize`) shows the item needs a real change, but address.md never ran on it.
+5. **Leftovers:** `~/.gaffer/evals/runs/20261025T152154-54a3e9/` and `<tmp>/gaffer-eval-1c93rinz` are kept, as before.
