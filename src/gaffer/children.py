@@ -127,6 +127,9 @@ CODEX_RO_PROFILE = "gaffer_ro"      # tester and reviewer (R20, R28)
 CODEX_TEST_PROFILE = "gaffer_test"  # gaffer's test_command (R4, R20, R28)
 
 _LIMIT_TEXT = re.compile(r"usage limit|rate limit|limit reached|limit exceeded", re.IGNORECASE)
+# R34: a provider throttling or overloaded error (HTTP 429 or 529) that the CLI gave up on. Not a
+# usage limit by itself: the runner backs off and retries, and only then treats it as one.
+_THROTTLE_TEXT = re.compile(r"\b(?:429|529)\b|too many requests|overloaded", re.IGNORECASE)
 _SHA = re.compile(r"^[0-9a-f]{7,40}$")
 
 
@@ -700,6 +703,17 @@ class LimitEvent:
     provider: str
     detail: str
     resets_at: int | None = None
+
+
+# R34: waits before each retry of a child that failed with HTTP 429/529 (about 30 s, 2 min, 5 min).
+# Still throttled after the last one: a usage limit (throttle_limit).
+THROTTLE_BACKOFF: tuple[float, ...] = (30.0, 120.0, 300.0)
+
+
+def throttle_limit(provider: str, role: str, retries: int, error: str | None) -> LimitEvent:
+    """The LimitEvent for a child still throttled after every backoff retry (R34)."""
+    detail = f"the {role} was still throttled (HTTP 429/529) after {retries} backoff retries"
+    return LimitEvent(provider, detail + (f": {error[:300]}" if error else ""))
 
 
 # --- Preflight (R2, R3, R15, R28, R29) --------------------------------------------
@@ -1387,6 +1401,7 @@ class WriterRun:
     log_path: Path | None
     group_terminated: bool          # R9: other group members outlived the grace period and were SIGTERMed
     stderr_tail: str
+    throttled: bool = False         # R34: no result, no limit, and the result event is an API 429/529 error
 
 
 def _write_private(path: Path, content: str) -> Path:
@@ -1509,13 +1524,15 @@ def _claude_writer(cfg: Config, repo: RepoConfig, jobs: JobDirs, prompt: str, *,
         except ResultError as e:
             error = f"malformed writer result: {e}"
     init = stream.init or {}
+    throttled = (result is None and stream.limit is None and not out.timed_out and ev is not None
+                 and bool(ev.get("is_error")) and bool(_THROTTLE_TEXT.search(str(ev.get("result") or ""))))
     return WriterRun(
         session_id=session_id, lease=out.lease, exit_code=out.exit_code, timed_out=out.timed_out, duration=out.duration,
         init=stream.init, result_event=ev, result=result, result_error=error, limit=stream.limit,
         model=cfg.writer_model, claude_version=init.get("claude_code_version"),
         skills=tuple(str(s) for s in init.get("skills") or []), usage=(ev or {}).get("usage") or {},
         num_turns=(ev or {}).get("num_turns"), permission_denials=tuple((ev or {}).get("permission_denials") or []),
-        log_path=log_path, group_terminated=out.group_terminated, stderr_tail=out.stderr_tail,
+        log_path=log_path, group_terminated=out.group_terminated, stderr_tail=out.stderr_tail, throttled=throttled,
     )
 
 
@@ -1538,6 +1555,7 @@ class CodexRun:
     model: str | None
     log_path: Path | None
     stderr_tail: str
+    throttled: bool = False       # R34: no result, no limit, and an HTTP 429 in the CLI's error events
 
 
 @dataclass(frozen=True)
@@ -1641,9 +1659,11 @@ def _codex_exec(role: str, cfg: Config, jobs: JobDirs, prompt: str, schema: Mapp
             error = f"{role} exited {out.exit_code} without a result" + (f": {stream.errors[-1][:300]}" if stream.errors else "")
         except ValueError:
             error = f"{role} result is not JSON"
+    throttled = data is None and limit is None and not out.timed_out and any(_THROTTLE_TEXT.search(e) for e in stream.errors)
     return CodexRun(role=role, lease=out.lease, exit_code=out.exit_code, timed_out=out.timed_out, duration=out.duration,
                     thread_id=stream.thread_id, data=data, result_error=error, limit=limit, usage=stream.usage,
-                    rate_limits=rate_limits, model=cfg.codex_model, log_path=log_path, stderr_tail=out.stderr_tail)
+                    rate_limits=rate_limits, model=cfg.codex_model, log_path=log_path, stderr_tail=out.stderr_tail,
+                    throttled=throttled)
 
 
 def run_tester(cfg: Config, jobs: JobDirs, prompt: str, *, paths: Paths | None = None,

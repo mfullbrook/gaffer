@@ -129,10 +129,15 @@ def _lease(role: str, pid: int, session: str | None, cwd: Path) -> ch.ChildLease
                          started_at=time.time())
 
 
-def codex_run(role: str, lease: ch.ChildLease, data: Any, error: str | None = None, limit: ch.LimitEvent | None = None) -> ch.CodexRun:
+def codex_run(role: str, lease: ch.ChildLease, data: Any, error: str | None = None, limit: ch.LimitEvent | None = None,
+              throttled: bool = False) -> ch.CodexRun:
     return ch.CodexRun(role=role, lease=lease, exit_code=0 if error is None else 1, timed_out=False, duration=1.0,
                        thread_id="t-1", data=data, result_error=error, limit=limit, usage={"input_tokens": 10},
-                       rate_limits=None, model=None, log_path=None, stderr_tail="")
+                       rate_limits=None, model=None, log_path=None, stderr_tail="", throttled=throttled)
+
+
+THROTTLED = "429"  # a tester_outputs / reviews entry: the Codex child failed with HTTP 429 (R34)
+CODEX_429_ERROR = "exited 1 without a result: exceeded retry limit, last status: 429 Too Many Requests"
 
 
 INIT = {"type": "system", "subtype": "init", "plugins": [], "mcp_servers": [], "apiKeySource": "none",
@@ -140,7 +145,8 @@ INIT = {"type": "system", "subtype": "init", "plugins": [], "mcp_servers": [], "
 
 
 def writer_run(session: str, lease: ch.ChildLease, result: dict | None, *, item_ids=None, error: str | None = None,
-               limit: ch.LimitEvent | None = None, init: dict | None = INIT, group_terminated: bool = False) -> ch.WriterRun:
+               limit: ch.LimitEvent | None = None, init: dict | None = INIT, group_terminated: bool = False,
+               throttled: bool = False) -> ch.WriterRun:
     parsed = None
     if result is not None and error is None:
         try:
@@ -151,7 +157,13 @@ def writer_run(session: str, lease: ch.ChildLease, result: dict | None, *, item_
                         result_event=None, result=parsed, result_error=error, limit=limit, model="opus",
                         claude_version="2.1.304", skills=tuple((init or {}).get("skills") or ()),
                         usage={"output_tokens": 100}, num_turns=3, permission_denials=(), log_path=None,
-                        group_terminated=group_terminated, stderr_tail="")
+                        group_terminated=group_terminated, stderr_tail="", throttled=throttled)
+
+
+def writer_throttled(call: WriterCall) -> ch.WriterRun:
+    """A writer action: the session ended in a Claude API 529 after Claude Code's own retries (R34)."""
+    return writer_run(call.session_id, _lease("writer", 1, call.session_id, call.clone), None,
+                      error="writer result 'success': API Error: 529 overloaded_error", throttled=True)
 
 
 @dataclass
@@ -261,6 +273,9 @@ class FakeChildren:
             raise out()
         if isinstance(out, ch.LimitEvent):
             return ch.TesterRun(codex_run("tester", lease, None, "limit", out), None, "limit")
+        if out == THROTTLED:
+            err = "tester " + CODEX_429_ERROR
+            return ch.TesterRun(codex_run("tester", lease, None, err, throttled=True), None, err)
         if out == "error":
             return ch.TesterRun(codex_run("tester", lease, None, "tester exited 1 without a result"), None,
                                 "tester exited 1 without a result")
@@ -276,6 +291,9 @@ class FakeChildren:
         out = self.reviews.pop(0) if self.reviews else {"summary": "looks fine", "findings": [], "harness_judgements": []}
         if out == "error":
             return ch.ReviewRun(codex_run("reviewer", lease, None, "reviewer timed out"), None, "reviewer timed out")
+        if out == THROTTLED:
+            err = "reviewer " + CODEX_429_ERROR
+            return ch.ReviewRun(codex_run("reviewer", lease, None, err, throttled=True), None, err)
         return ch.ReviewRun(codex_run("reviewer", lease, out), ch.parse_review_result(out), None)
 
     # writer

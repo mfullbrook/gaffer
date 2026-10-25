@@ -50,7 +50,7 @@ import time
 import urllib.error
 import urllib.request
 from collections.abc import Callable, Iterator, Mapping, Sequence
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any, Protocol, TextIO
 
@@ -419,6 +419,8 @@ class Deps:
     # Where per-job state dirs (child logs, report.md) live; None is ~/.gaffer/jobs. `gaffer eval`
     # keeps each eval run's jobs apart under ~/.gaffer/evals (still denied to children, R28).
     state_root: Path | None = None
+    # R34: waits before each retry of a child that failed with HTTP 429/529; then it's a usage limit.
+    backoff: tuple[float, ...] = ch.THROTTLE_BACKOFF
 
 
 # --- locks (R9) ---------------------------------------------------------------------
@@ -901,6 +903,27 @@ class Runner:
             store.release_lease(lease.id, "exited")
         return result
 
+    def _codex(self, job: st.Job, role: str, step: str, fn: Callable[[OnSpawn], Any]) -> Any:
+        """R34: a Codex child (tester or reviewer) that failed with HTTP 429 is run again after each
+        wait in Deps.backoff (about 30 s, 2 min, 5 min). Each try is its own attempt row (outcome
+        "throttled") and a "throttled" event, but none of them is the step's own retry: the caller
+        sees one run. Still throttled after the last wait: the run carries a LimitEvent, so the
+        caller's existing usage-limit path ends the job BLOCKED: usage_limit."""
+        waits = self.d.backoff
+        for i in range(len(waits) + 1):
+            run = self._child(job, role, step, None, fn)
+            if not run.run.throttled:
+                return run
+            if i == len(waits):
+                return replace(run, run=replace(run.run, limit=ch.throttle_limit("codex", role, len(waits), run.result_error)))
+            self._throttled(job, "codex", role, step, i + 1, waits[i], run.result_error)
+        raise AssertionError("unreachable")
+
+    def _throttled(self, job: st.Job, provider: str, role: str, step: str, retry: int, wait: float, error: str | None) -> None:
+        self.store.log_event(job.id, "throttled", {"provider": provider, "role": role, "step": step, "retry": retry,
+                                                    "wait": wait, "error": (error or "")[:300]})
+        self.d.sleep(wait)
+
     def _reap_leases(self, job: st.Job | None) -> None:
         """R9: release leases of dead children; refuse to act while any child of the job is alive."""
         if job is None:
@@ -949,7 +972,7 @@ class Runner:
             job = store.set_state(job.id, "TESTER")
             prompt = ch.tester_prompt(repo, issue_key=job.issue_key, issue_title=issue.title,
                                       issue_body=issue.description, retry_error=retry)
-            run: ch.TesterRun = self._child(job, "tester", "TESTER", None,
+            run: ch.TesterRun = self._codex(job, "tester", "TESTER",
                                             lambda on_spawn: self.children.run_tester(self._jobs(job, ws), prompt, on_spawn=on_spawn))
             if run.run.limit is not None:
                 raise Blocked("usage_limit", _limit_text(run.run.limit))
@@ -1120,6 +1143,35 @@ class Runner:
 
     def _launch(self, job: st.Job, ws: ws_mod.Workspace, repo: RepoConfig, session: str, prompt: str, *,
                 item_ids: Sequence[str] | None, step: str) -> ch.WriterRun:
+        run = self._launch_once(job, ws, repo, session, prompt, item_ids=item_ids, step=step)
+        # Recovery table, WRITER (child dead): a retry resumes the session with "continue".
+        return self._writer_backoff(job, ws, repo, run, session, ch.CONTINUE_PROMPT, item_ids=item_ids, step=step)
+
+    def _resume(self, job: st.Job, ws: ws_mod.Workspace, repo: RepoConfig, session: str, prompt: str, *,
+                item_ids: Sequence[str] | None, step: str, handoff: str = "") -> ch.WriterRun:
+        run = self._resume_once(job, ws, repo, session, prompt, item_ids=item_ids, step=step, handoff=handoff)
+        # Recovery table, RESUME (child dead): a retry resumes the session with the same prompt (packet).
+        return self._writer_backoff(job, ws, repo, run, session, prompt, item_ids=item_ids, step=step)
+
+    def _writer_backoff(self, job: st.Job, ws: ws_mod.Workspace, repo: RepoConfig, run: ch.WriterRun, session: str,
+                        retry_prompt: str, *, item_ids: Sequence[str] | None, step: str) -> ch.WriterRun:
+        """R34: a writer run that ended in a Claude API 429/529 error (after Claude Code's own
+        retries) is resumed after each wait in Deps.backoff, as a rerun would resume a dead writer.
+        Not a nudge, a fresh-writer fallback or a repair cycle. Still throttled after the last
+        wait: the run carries a LimitEvent, so _check_writer_run ends the job BLOCKED: usage_limit."""
+        for i, wait in enumerate(self.d.backoff, 1):
+            if not run.throttled:
+                return run
+            self._throttled(job, "claude", "writer", step, i, wait, run.result_error)
+            # A fresh-writer fallback already handed the task to a new session: just continue it.
+            prompt = retry_prompt if run.session_id == session else ch.CONTINUE_PROMPT
+            run = self._resume_once(job, ws, repo, run.session_id, prompt, item_ids=item_ids, step=step)
+        if run.throttled:
+            return replace(run, limit=ch.throttle_limit("claude", "writer", len(self.d.backoff), run.result_error))
+        return run
+
+    def _launch_once(self, job: st.Job, ws: ws_mod.Workspace, repo: RepoConfig, session: str, prompt: str, *,
+                     item_ids: Sequence[str] | None, step: str) -> ch.WriterRun:
         for attempt in (1, 2):
             try:
                 return self._child(job, "writer", step, session, lambda on_spawn: self.children.launch_writer(
@@ -1131,8 +1183,8 @@ class Runner:
                 job = self.store.set_writer_session(job.id, session)
         raise AssertionError("unreachable")
 
-    def _resume(self, job: st.Job, ws: ws_mod.Workspace, repo: RepoConfig, session: str, prompt: str, *,
-                item_ids: Sequence[str] | None, step: str, handoff: str = "") -> ch.WriterRun:
+    def _resume_once(self, job: st.Job, ws: ws_mod.Workspace, repo: RepoConfig, session: str, prompt: str, *,
+                     item_ids: Sequence[str] | None, step: str, handoff: str = "") -> ch.WriterRun:
         for attempt in (1, 2):
             try:
                 run = self._child(job, "writer", step, session, lambda on_spawn: self.children.resume_writer(
@@ -1149,7 +1201,7 @@ class Runner:
             self.store.log_event(job.id, "fresh_writer", {"old_session": session, "new_session": new,
                                                           "why": run.result_error or "resume failed"})
             text = self._handoff(job, ws, repo, prompt)
-            return self._launch(job, ws, repo, new, text, item_ids=item_ids, step=step)
+            return self._launch_once(job, ws, repo, new, text, item_ids=item_ids, step=step)
         return run
 
     def _handoff(self, job: st.Job, ws: ws_mod.Workspace, repo: RepoConfig, task: str) -> str:
@@ -1327,7 +1379,7 @@ class Runner:
                                   tester=tr, base_sha=job.base_sha, head_sha=head, harness_changes=list(dict.fromkeys(changes)))
         last_error = ""
         for _attempt in (1, 2):
-            run: ch.ReviewRun = self._child(job, "reviewer", "PUBLISH", None, lambda on_spawn: self.children.run_reviewer(
+            run: ch.ReviewRun = self._codex(job, "reviewer", "PUBLISH", lambda on_spawn: self.children.run_reviewer(
                 self._jobs(job, ws), prompt, on_spawn=on_spawn))
             if run.run.limit is not None:
                 raise Blocked("usage_limit", _limit_text(run.run.limit))
@@ -1703,9 +1755,9 @@ def _limit_text(limit: ch.LimitEvent) -> str:
 
 def _outcome(result: Any) -> str:
     if isinstance(result, ch.WriterRun):
-        return "ok" if result.result else (f"limit" if result.limit else "no_result")
+        return "ok" if result.result else ("limit" if result.limit else "throttled" if result.throttled else "no_result")
     if isinstance(result, (ch.TesterRun, ch.ReviewRun)):
-        return "ok" if result.result else ("limit" if result.run.limit else "no_result")
+        return "ok" if result.result else ("limit" if result.run.limit else "throttled" if result.run.throttled else "no_result")
     if isinstance(result, ch.CommandRun):
         return "timeout" if result.timed_out else f"exit {result.exit_code}"
     return "ok"
@@ -2060,7 +2112,7 @@ def build_parser() -> argparse.ArgumentParser:
                     help="gaffer.toml for models, vault and allowed MCP (default: ~/.gaffer/gaffer.toml if it exists, "
                          "else built-in defaults); its repos are not used")
     ev_mode = ev.add_mutually_exclusive_group()
-    ev_mode.add_argument("--save-baseline", action="store_true", help="run, then store this run as the new baseline")
+    ev_mode.add_argument("--save-baseline", action="store_true", help="run, then store this run as the new baseline unless it has regressions (R34)")
     ev_mode.add_argument("--promote", metavar="RUN_ID", help="store an earlier complete run as the baseline (no children)")
     return p
 

@@ -515,6 +515,82 @@ def test_codex_usage_limit_from_the_stream():
     assert children.codex_limit_event({"primary": {"used_percent": 2.0}}, ["stream disconnected"]) is None
 
 
+# R34: HTTP 429 from Codex (the R33 live run's exact events) is "throttled", not a limit by itself.
+CODEX_429 = [json.dumps({"type": "error", "message": "exceeded retry limit, last status: 429 Too Many Requests"}),
+             json.dumps({"type": "turn.failed", "error": {"message": "exceeded retry limit, last status: 429 Too Many Requests"}})]
+
+
+@pytest.mark.parametrize("run_child", [children.run_tester, children.run_reviewer], ids=["tester", "reviewer"])
+def test_codex_429_without_a_result_is_throttled(cfg_repo, jobs, paths, fakes, run_child):
+    cfg, _ = cfg_repo
+    codex_exec(fakes, None, exit=1, extra_lines=CODEX_429)
+    run = run_child(cfg, jobs, "# prompt", paths=paths)
+    assert run.result is None and "429 Too Many Requests" in run.result_error
+    assert run.run.throttled and run.run.limit is None
+
+
+@pytest.mark.parametrize("message", ["stream disconnected", "status: 4290 bytes", "HTTP 503 Service Unavailable"])
+def test_other_codex_errors_are_not_throttled(cfg_repo, jobs, paths, fakes, message):
+    cfg, _ = cfg_repo
+    codex_exec(fakes, None, exit=1, extra_lines=[json.dumps({"type": "error", "message": message})])
+    run = children.run_tester(cfg, jobs, "# tester", paths=paths)
+    assert run.result is None and not run.run.throttled
+
+
+def test_codex_429_with_a_result_is_not_throttled(cfg_repo, jobs, paths, fakes):
+    cfg, _ = cfg_repo
+    codex_exec(fakes, spike_tester_output("py"), extra_lines=CODEX_429[:1])  # the CLI recovered by itself
+    run = children.run_tester(cfg, jobs, "# tester", paths=paths)
+    assert run.result is not None and not run.run.throttled
+
+
+def test_codex_usage_limit_wins_over_429(cfg_repo, jobs, paths, fakes):
+    cfg, _ = cfg_repo
+    codex_exec(fakes, None, exit=1, extra_lines=[
+        json.dumps({"type": "error", "message": "429 Too Many Requests: You've hit your usage limit."})])
+    run = children.run_tester(cfg, jobs, "# tester", paths=paths)
+    assert run.run.limit is not None and not run.run.throttled
+
+
+CLAUDE_529 = 'API Error: 529 {"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}'
+
+
+@pytest.mark.parametrize("text", [CLAUDE_529, "API Error: 429 Too Many Requests", "API Error: Repeated 529 Overloaded errors"])
+def test_claude_api_429_or_529_is_throttled(cfg_repo, jobs, paths, fakes, text):
+    cfg, repo = cfg_repo
+    sid = children.new_session_id()
+    fakes.install("claude", {"default": {"lines": jsonl(
+        claude_init_event("a8", session_id=sid),
+        {**claude_result_event(sid), "is_error": True, "subtype": "success", "result": text, "structured_output": None})}})
+    run = children.launch_writer(cfg, repo, jobs, "# go", session_id=sid, paths=paths, group_grace=0)
+    assert run.result is None and run.limit is None and run.throttled
+
+
+@pytest.mark.parametrize("events", [
+    # a real subscription cap: the rate_limit_event wins, even with a 429 in the text
+    lambda sid: [claude_init_event("a8", session_id=sid),
+                 {"type": "rate_limit_event", "rate_limit_info": {"status": "rejected", "rateLimitType": "five_hour"}},
+                 {**claude_result_event(sid), "is_error": True, "result": "API Error: 429 Too Many Requests",
+                  "structured_output": None}],
+    # other errors
+    lambda sid: [claude_init_event("a8", session_id=sid),
+                 {**claude_result_event(sid), "subtype": "error_max_turns", "is_error": True}],
+    # a 529 mentioned in a successful result is not an error
+    lambda sid: [claude_init_event("a8", session_id=sid),
+                 {**claude_result_event(sid, {"status": "done", "summary": "handled HTTP 529 retries",
+                                              "question": None}), "result": "HTTP 529 handled"}],
+    # no structured result, but not an error event either: a malformed result, not a throttle
+    lambda sid: [claude_init_event("a8", session_id=sid),
+                 {**claude_result_event(sid, {"status": "maybe"}), "result": "retried after HTTP 529"}],
+], ids=["limit-wins", "max-turns", "success", "malformed"])
+def test_other_claude_results_are_not_throttled(cfg_repo, jobs, paths, fakes, events):
+    cfg, repo = cfg_repo
+    sid = children.new_session_id()
+    fakes.install("claude", {"default": {"lines": jsonl(*events(sid))}})
+    run = children.launch_writer(cfg, repo, jobs, "# go", session_id=sid, paths=paths, group_grace=0)
+    assert not run.throttled
+
+
 def test_reviewer(cfg_repo, jobs, paths, fakes):
     cfg, _ = cfg_repo
     review = {"summary": "ok with one bug", "findings": [

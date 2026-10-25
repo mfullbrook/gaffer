@@ -118,7 +118,7 @@ class EvalWorld(World):
 
         code = pe.eval_main(config, home=self.home, save_baseline=save_baseline, promote=promote, out=out,
                             evals_dir=self.evals, children=children, scanner=self.scanner, clock=self.clock,
-                            scratch_dir=self.tmp)
+                            scratch_dir=self.tmp, sleep=self.sleeps.append)
         text = out.getvalue()
         self.outputs.append(text)
         return code, text
@@ -307,14 +307,65 @@ def test_regression_run_promoted_with_promote(world):
     assert world.children.tester_calls == tester_calls  # promoting runs no child
 
 
-def test_save_baseline_promotes_this_run(world):
+def test_save_baseline_refuses_a_run_with_regressions(world):
+    """R34: the run is stored and compared, but only `--promote RUN` makes it the baseline."""
     assert world.eval()[0] == 0
+    old = world.baseline()["run_id"]
     _regress_decline(world)
     code, out = world.eval(save_baseline=True)
-    assert code == pe.EXIT_PASS
+    assert code == pe.EXIT_REGRESSION
     assert "REGRESSION: EVAL-1: hidden tests 2/2 -> 1/2" in out  # the comparison is still shown
-    assert "replacing" in out
+    run_id = world.runs()[-1]["run_id"]
+    assert run_id != old and pe.run_path(world.home, run_id).exists()  # stored
+    n = out.count("  REGRESSION: ")
+    assert n >= 1
+    assert (f"not stored as the baseline: {n} regression(s) against baseline {old}. If they are intended, "
+            f"promote this run deliberately with `gaffer eval --promote {run_id}`.") in out
+    assert "replacing" not in out and world.baseline()["run_id"] == old
+    code, out = world.eval(promote=run_id)  # --promote is unchanged
+    assert code == 0 and world.baseline()["run_id"] == run_id
     assert world.baseline()["tickets"][0]["address"] == "declined"
+
+
+def test_save_baseline_promotes_a_run_without_regressions(world):
+    assert world.eval()[0] == 0
+    old = world.baseline()["run_id"]
+    world.children.tester_outputs = ["error"]  # a tester retry: a warning, not a regression
+    code, out = world.eval(save_baseline=True)
+    assert code == pe.EXIT_PASS, out
+    assert "0 regression(s), 1 warning(s)" in out and f"replacing {old}" in out
+    assert world.baseline()["run_id"] == world.runs()[-1]["run_id"] != old
+
+
+def test_save_baseline_with_no_baseline_stores_the_run(world):
+    code, out = world.eval(save_baseline=True)
+    assert code == pe.EXIT_PASS and world.baseline()["run_id"] == world.runs()[-1]["run_id"]
+
+
+# --- R34: HTTP 429 in an eval ----------------------------------------------------------------
+
+
+def test_429_recovered_after_a_wait_is_not_a_tester_retry(world):
+    world.children.tester_outputs = [rf.THROTTLED]
+    code, out = world.eval()
+    assert code == pe.EXIT_PASS, out
+    t = world.runs()[-1]["tickets"][0]
+    assert t["stages"]["tester"] == "ok" and t["metrics"]["tester_attempts"] == 1
+    assert t["metrics"]["throttled_retries"] == 1 and world.sleeps[0] == 30.0
+
+
+def test_429_that_ends_as_a_limit_makes_the_run_incomplete_and_unpromoted(world):
+    assert world.eval()[0] == 0
+    old = world.baseline()["run_id"]
+    world.children.reviews = [rf.THROTTLED] * 4
+    code, out = world.eval(save_baseline=True)
+    assert code == pe.EXIT_INCOMPLETE, out
+    run = world.runs()[-1]
+    assert run["complete"] is False and run["stopped"].startswith("usage limit on EVAL-1: codex usage limit: the reviewer")
+    assert [t["key"] for t in run["tickets"]] == ["EVAL-1"]  # EVAL-2 never started
+    assert world.baseline()["run_id"] == old
+    assert world.sleeps[:3] == [30.0, 120.0, 300.0]
+    assert world.eval(promote=run["run_id"])[0] == pe.EXIT_REFUSED
 
 
 def test_promote_refuses_unknown_or_incomplete_runs(world):

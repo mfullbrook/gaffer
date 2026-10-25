@@ -23,7 +23,9 @@ Storage (JSON, not state.db): `~/.gaffer/evals/runs/<run>.json` per run and
 is under `~/.gaffer/evals/runs/<run>/`, denied to children like the rest of ~/.gaffer (R28); the
 job clones are under a temp job root. The first complete run becomes the baseline; later runs
 are compared with it (regressions exit 2) until `--save-baseline` or `--promote RUN` replaces
-it. Run manually before merging a change under prompts/, never in CI (R19).
+it. `--save-baseline` refuses a run with regressions (still stored, exit 2; R34): promote one
+deliberately with `--promote RUN`. Run manually before merging a change under prompts/, never in
+CI (R19).
 """
 
 from __future__ import annotations
@@ -60,8 +62,9 @@ EVALS_DIR = Path(__file__).resolve().parents[2] / "evals"
 TEAM = "EVAL"
 RECORD_VERSION = 1
 
-# Exit codes, following R8's: 0 baseline stored or no regression, 1 internal error, 2 regression,
-# 3 incomplete (a usage limit or error stopped the run; nothing was promoted), 4 refused (lock,
+# Exit codes, following R8's: 0 baseline stored or no regression, 1 internal error, 2 regression
+# (with --save-baseline: not promoted, R34), 3 incomplete (a usage limit, including HTTP 429 still
+# throttled after R34's backoff, or an error stopped the run; nothing was promoted), 4 refused (lock,
 # config, preflight or doctor).
 EXIT_PASS = 0
 EXIT_ERROR = rn.EXIT_ERROR
@@ -403,6 +406,7 @@ class Env:
     tickets: Sequence[Ticket]
     clock: rn.Clock = field(default_factory=st.SystemClock)
     say: Callable[[str], None] = print  # the console
+    sleep: Callable[[float], None] = time.sleep  # the runner's waits, R34's 429 backoff among them
 
 
 @dataclass
@@ -422,7 +426,7 @@ def run_ticket(env: Env, ticket: Ticket) -> TicketRun:
         with log_path.open("w") as log:
             deps = rn.Deps(cfg=env.cfg, store=store, children=env.children, github=no_github,
                            linear=lambda: TicketLinear(env.tickets), scanner=env.scanner, clock=env.clock,
-                           sleep=time.sleep, home=env.home, token=lambda: None, remote_url=lambda repo: env.remote_url,
+                           sleep=env.sleep, home=env.home, token=lambda: None, remote_url=lambda repo: env.remote_url,
                            out=log, state_root=env.run_dir / "jobs")
             runner = EvalRunner(deps, ticket, doctor_store=env.doctor_store, doctor_cfg=env.doctor_cfg, console=env.say)
             error = None
@@ -466,7 +470,8 @@ def collect(store: st.Store, job: st.Job | None, ticket: Ticket, wall: float) ->
     reds = ev("red_first")
     cmap = job.criterion_map or {}
     tests = cmap.get("tests", [])
-    tester_attempts = sum(a.role == "tester" for a in attempts)
+    # R34: a try that ended in HTTP 429 and was retried after a backoff isn't one of the tester's retries.
+    tester_attempts = sum(a.role == "tester" and a.outcome != "throttled" for a in attempts)
 
     def failed(*steps: str) -> str | None:
         # The BLOCKED reason when the job stopped at one of these steps.
@@ -553,6 +558,7 @@ def collect(store: st.Store, job: st.Job | None, ticket: Ticket, wall: float) ->
             "tester_attempts": tester_attempts,
             "nudges": len(ev("writer_nudge")),
             "fresh_writer_fallbacks": len(ev("fresh_writer")),
+            "throttled_retries": len(ev("throttled")),  # R34 backoff retries after HTTP 429/529
             "by_role": by_role,
         },
         "final_head": final_head,
@@ -781,6 +787,7 @@ def new_run_id(now: float) -> str:
 
 
 def eval_main(config_path: Path | None, *, home: Path, save_baseline: bool = False, promote: str | None = None,
+              sleep: Callable[[float], None] = time.sleep,
               out: TextIO = sys.stdout, evals_dir: Path = EVALS_DIR,
               children: Callable[[Config, Config | None], rn.ChildrenPort] | None = None,
               scanner: ws_mod.SecretScanner | None = None, clock: rn.Clock | None = None,
@@ -794,7 +801,7 @@ def eval_main(config_path: Path | None, *, home: Path, save_baseline: bool = Fal
         if promote is not None:
             return _promote_main(home, promote, clock, say)
         return _eval(config_path, home=home, save_baseline=save_baseline, say=say, evals_dir=evals_dir,
-                     children=children, scanner=scanner, clock=clock, scratch_dir=scratch_dir)
+                     children=children, scanner=scanner, clock=clock, scratch_dir=scratch_dir, sleep=sleep)
     except rn.Refused as e:
         say(f"gaffer eval: refused: {e}")
         return EXIT_REFUSED
@@ -823,7 +830,7 @@ def _promote_main(home: Path, run_id: str, clock: rn.Clock, say: Callable[[str],
 
 def _eval(config_path: Path | None, *, home: Path, save_baseline: bool, say: Callable[[str], None], evals_dir: Path,
           children: Callable[[Config, Config | None], rn.ChildrenPort] | None, scanner: ws_mod.SecretScanner | None,
-          clock: rn.Clock, scratch_dir: Path | None) -> int:
+          clock: rn.Clock, scratch_dir: Path | None, sleep: Callable[[float], None] = time.sleep) -> int:
     tickets = load_tickets(evals_dir / "tickets")
     path = config_path or gconfig.default_config_path(home)
     user = gconfig.load_config(path, home=home) if config_path is not None or path.exists() else None
@@ -843,7 +850,7 @@ def _eval(config_path: Path | None, *, home: Path, save_baseline: bool, say: Cal
         cfg = eval_config(user, home=home, checkout=checkout, job_root=scratch / "jobs", scratch=run_dir)
         env = Env(home=home, cfg=cfg, doctor_cfg=user, doctor_store=doctor_store, run_dir=run_dir,
                   remote_url=str(remote), children=(children or EvalChildren)(cfg, user),
-                  scanner=scanner or ws_mod.Gitleaks(), tickets=tickets, clock=clock, say=say)
+                  scanner=scanner or ws_mod.Gitleaks(), tickets=tickets, clock=clock, say=say, sleep=sleep)
         say(f"gaffer eval: run {run_id}: {len(tickets)} tickets; writer model {cfg.writer_model}; "
             f"logs in {run_dir}; job clones in {scratch / 'jobs'}.")
         results: list[dict[str, Any]] = []
@@ -888,6 +895,11 @@ def _verdict(home: Path, record: dict[str, Any], *, save_baseline: bool, say: Ca
         say(f"gaffer eval: INCOMPLETE ({record['stopped']}); not stored as a baseline. "
             f"Rerun `gaffer eval` once the cause is fixed.")
         return EXIT_INCOMPLETE
+    if save_baseline and c is not None and c.regressions:
+        say(f"gaffer eval: not stored as the baseline: {len(c.regressions)} regression(s) against baseline "
+            f"{baseline.get('run_id')}. If they are intended, promote this run deliberately with "
+            f"`gaffer eval --promote {record['run_id']}`.")
+        return EXIT_REGRESSION
     if baseline is None or save_baseline:
         store_baseline(home, record, now)
         say(f"gaffer eval: stored run {record['run_id']} as the baseline ({baseline_path(home)})"
