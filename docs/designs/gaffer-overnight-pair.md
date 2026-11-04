@@ -2423,7 +2423,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: R19
   - Files: evals/, src/gaffer/runner.py
   - Verify: `gaffer eval` stores a baseline; second run compares
-- [ ] **T12 (P2, human: ~1h / CC: ~10 min)** docs: README prerequisites and residual risks
+- [x] **T12 (P2, human: ~1h / CC: ~10 min)** docs: README prerequisites and residual risks
   - Surfaced by: R1 (residual risk), R15 (gitleaks), R16 (never-sleep guidance), R3 (one-time logins)
   - Files: README.md
   - Verify: manual read-through against R1, R3, R15, R16
