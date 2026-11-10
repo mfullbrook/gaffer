@@ -472,7 +472,8 @@ def test_config_inside_vault_refused(home):
 
 # --- Keychain --------------------------------------------------------------
 
-TOKEN = "ghp_FAKE0123456789abcdefghijklmnopqrstuv"
+# A fake token, built at runtime so no token-shaped literal sits in the repo.
+TOKEN = "ghp_" + "FAKE0123456789abcdefghijklmnopqrstuv"
 
 
 class FakeKeychain:

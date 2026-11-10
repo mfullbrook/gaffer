@@ -6,6 +6,13 @@
   </picture>
 </p>
 
+<p align="center">
+  <a href="https://github.com/mfullbrook/gaffer/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/mfullbrook/gaffer/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+  <img alt="Python 3.14" src="https://img.shields.io/badge/python-3.14-blue.svg">
+  <img alt="macOS" src="https://img.shields.io/badge/platform-macOS-lightgrey.svg">
+</p>
+
 gaffer turns one Linear issue into a reviewed pull request while you are away from the keyboard. Codex writes the tests, Claude writes the code, and a small local Python process (SQLite, no server, no inbound network) runs the job and does all the waiting.
 
 It runs only on your Claude and ChatGPT subscriptions, through the `claude` and `codex` CLIs. It never uses API keys: preflight refuses to start if it finds one, or if either CLI is logged in any other way.
@@ -315,3 +322,11 @@ The suite has 1086 tests and takes about 10 to 14 minutes. It runs on fakes, rec
 - `docs/t*-report.md`, `docs/r3*-report.md`: one report per task or amendment, each with its open issues.
 - `spike/`, `experiments/`: throwaway scripts behind those results.
 - `logos/`: the logo. `logos/build_logo.py` regenerates the SVGs and PNG previews.
+
+## Contributing
+
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md), and report security problems privately as described in [SECURITY.md](SECURITY.md). This project follows a [code of conduct](CODE_OF_CONDUCT.md).
+
+## License
+
+[MIT](LICENSE)

@@ -1,0 +1,3 @@
+# Fake token in a test fixture (tests/test_config.py), committed before the
+# literal was split up. It was never a real credential.
+7d5d530451b36bf633504a9c2a655b6a979c6bbf:tests/test_config.py:github-pat:443

@@ -1,0 +1,32 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    # gaffer's sandboxes are macOS Seatbelt, and the tests exercise macOS paths.
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # the secret scan reads the full history
+      - uses: astral-sh/setup-uv@v6
+      - name: Install gitleaks
+        run: brew install gitleaks
+      - name: Secret scan
+        run: gitleaks git --redact --log-opts=--all .
+      - name: Install
+        run: uv sync --locked
+      - name: Test
+        run: uv run pytest -q

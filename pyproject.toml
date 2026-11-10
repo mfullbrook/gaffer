@@ -2,11 +2,30 @@
 name = "gaffer"
 version = "0.1.0"
 description = "Overnight pair: a Codex tester and a Claude writer, supervised by gaffer"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
-    { name = "Mark Fullbrook", email = "mark@fullbrook.me" }
+    { name = "Mark Fullbrook" }
 ]
 requires-python = ">=3.14"
+keywords = ["claude-code", "codex", "linear", "coderabbit", "ai-agents", "code-review"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Quality Assurance",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/mfullbrook/gaffer"
+Issues = "https://github.com/mfullbrook/gaffer/issues"
+Changelog = "https://github.com/mfullbrook/gaffer/blob/main/CHANGELOG.md"
 
 [project.scripts]
 gaffer = "gaffer:main"
