@@ -13,7 +13,7 @@
   <img alt="macOS" src="https://img.shields.io/badge/platform-macOS-lightgrey.svg">
 </p>
 
-gaffer turns one Linear issue into a reviewed pull request while you are away from the keyboard. Codex writes the tests, Claude writes the code, and a small local Python process (SQLite, no server, no inbound network) runs the job and does all the waiting.
+gaffer is designed to turn one Linear issue into a reviewed pull request while you are away from the keyboard. Codex writes the tests, Claude writes the code, and a small local Python process (SQLite, no server, no inbound network) runs the job and does all the waiting.
 
 It runs only on your Claude and ChatGPT subscriptions, through the `claude` and `codex` CLIs. It never uses API keys: preflight refuses to start if it finds one, or if either CLI is logged in any other way.
 
